@@ -258,6 +258,11 @@ td:first-child,th:first-child{text-align:left}
 .pickg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .pickg button{display:flex;align-items:center;gap:8px;padding:12px 10px;border-radius:14px;border:none;background:var(--soft);color:var(--cream);font:inherit;font-size:14px;font-weight:600;text-align:left}
 .pickg img{width:28px;height:28px;flex:0 0 auto}
+.rcb{margin-top:12px}
+.rcbox{display:flex;align-items:center;gap:10px;margin-top:12px;padding:8px;border-radius:14px;background:var(--soft)}
+.rcbox img{width:56px;height:72px;object-fit:cover;border-radius:8px;background:#ddd}
+.rcbox span{flex:1;font-size:14px;font-weight:600}
+.pr.pre{color:var(--muted)}
 /* pagine interne a palette */
 .hero{color:#fff!important;border-radius:26px!important;padding:16px 14px 14px!important;margin:0 0 20px!important;
   background:linear-gradient(180deg,#f6825a 0%,#ef6639 42%,#e3552b 100%)!important;
@@ -529,7 +534,7 @@ var OPS = [
   ['altro','Altro','#5a4636','#ffffff']
 ];
 var LTYPES = [['mobile','Mobile'],['fisso','Fisso casa'],['fibra','Fibra / WiFi'],['fwa','FWA'],['altro','Altro']];
-var DEF_PAY = ['Carta Oro MPS','Carta debito MPS','BBVA','Revolut','Satispay','Conto corrente (RID)'];
+var DEF_PAY = ['Carta Oro MPS','Carta debito MPS','BBVA','Revolut','Satispay','Conto corrente (RID)','Contanti'];
 
 /* utenze di casa: id, nome, icona 3D, colori del riquadro */
 var KINDS = [
@@ -546,8 +551,8 @@ var FREQ = [[1,'Mensile'],[2,'Bimestrale'],[3,'Trimestrale'],[4,'Quadrimestrale'
 var ENERGY = ['Enel Energia','Servizio Elettrico Naz.','A2A','Edison','Eni Plenitude','Hera Comm','Estenergy','AGSM AIM','Ascotrade','Iren','Acea','Sorgenia','Engie','Octopus Energy','Dolomiti Energia','Illumia'];
 var PROV = { luce:ENERGY, gas:ENERGY, rifiuti:['Comune (TARI)'], condominio:['Amministratore'], affitto:['Proprietario'] };
 var OFFERS = ['Prezzo fisso','Variabile (PUN/PSV)','Tutele / Placet','Altro'];
-var PAYTYPES = [['credito','Carta di credito'],['debito','Carta di debito'],['rid','Conto (RID)'],['wallet','Wallet / app']];
-var DEF_PAYTYPE = { 'Carta Oro MPS':'credito', 'Carta debito MPS':'debito', 'BBVA':'debito', 'Revolut':'debito', 'Satispay':'wallet', 'Conto corrente (RID)':'rid' };
+var PAYTYPES = [['credito','Carta di credito'],['debito','Carta di debito'],['rid','Conto (RID)'],['wallet','Wallet / app'],['cash','Contanti']];
+var DEF_PAYTYPE = { 'Contanti':'cash', 'Carta Oro MPS':'credito', 'Carta debito MPS':'debito', 'BBVA':'debito', 'Revolut':'debito', 'Satispay':'wallet', 'Conto corrente (RID)':'rid' };
 
 var S = null, view = 'home', period = 'oggi', sh = null, toastT = null, telFilter = '', casaSel = '';
 
@@ -592,10 +597,12 @@ function load(){
     if (!S.custom) S.custom = {};
     if (!S.secx) S.secx = {};
     if (!S.inc) S.inc = { log: [], rec: [] };
+    if (!S.pre) S.pre = [];
+    if (S.tel.pay.indexOf('Contanti') < 0) { S.tel.pay.push('Contanti'); S.payType['Contanti'] = 'cash'; }
     save();
     return;
   }
-  S = { ver: VER, items: clone(DEF_ITEMS), people: DEF_PEOPLE.slice(), log: [], tel: { lines: [], pay: DEF_PAY.slice() }, casa: { homes: [], bills: [] }, payType: clone(DEF_PAYTYPE), rec: [], sp: [], ents: { auto: [], cani: [{ id:'e1', name:'Dalton', breed:'Weimaraner' }, { id:'e2', name:'Shelby', breed:'Weimaraner' }] }, custom: {}, secx: {}, inc: { log: [], rec: [] } };
+  S = { ver: VER, items: clone(DEF_ITEMS), people: DEF_PEOPLE.slice(), log: [], tel: { lines: [], pay: DEF_PAY.slice() }, casa: { homes: [], bills: [] }, payType: clone(DEF_PAYTYPE), rec: [], sp: [], ents: { auto: [], cani: [{ id:'e1', name:'Dalton', breed:'Weimaraner' }, { id:'e2', name:'Shelby', breed:'Weimaraner' }] }, custom: {}, secx: {}, inc: { log: [], rec: [] }, pre: [] };
   try { old = JSON.parse(localStorage.getItem(OLDKEY) || 'null'); } catch(x) { old = null; }
   if (old && old.log) {
     if (old.people) S.people = old.people;
@@ -717,7 +724,7 @@ function renderHome(){
   }
   return h;
 }
-var PTCOL = { credito:'#c9a227', debito:'#d9774b', rid:'#5b8fd9', wallet:'#5fb37a', '':'#7a6450' };
+var PTCOL = { credito:'#c9a227', debito:'#d9774b', rid:'#5b8fd9', wallet:'#5fb37a', cash:'#3f9e6a', '':'#7a6450' };
 function payType(name){ return (S.payType && S.payType[name]) || ''; }
 function payTypeName(name){ var t = payType(name), i; for (i = 0; i < PAYTYPES.length; i++) { if (PAYTYPES[i][0] === t) return PAYTYPES[i][1]; } return 'tipo da impostare'; }
 function recurring(){
@@ -1163,7 +1170,22 @@ function secStats(sec, ignoreSel){
   }
   return r;
 }
-function backBar(){ return '<button class="back" data-act="tab" data-v="home">‹ Cruscotto</button>'; }
+function backBar(){ return '<button class="back" data-act="back">‹ Indietro</button>'; }
+/* cronologia interna: il tasto indietro del telefono e quello in alto tornano alla pagina prima */
+var navStack = [], sheetPushed = false, ignorePop = false;
+function snap(){ return { view:view, curSec:curSec, hubTab:hubTab, movPer:movPer, movPay:movPay, entSel:entSel, casaSel:casaSel, telFilter:telFilter, y:window.pageYOffset || 0 }; }
+function navPush(){ navStack.push(snap()); try { history.pushState({ bi:navStack.length }, ''); } catch(x) {} }
+function goBack(){ if (navStack.length) { try { history.back(); } catch(x) { navPop(); } } else { view = 'home'; hubTab = 'dash'; render(); window.scrollTo(0, 0); } }
+function navPop(){
+  var s = navStack.pop(); if (!s) return;
+  view = s.view; curSec = s.curSec; hubTab = s.hubTab; movPer = s.movPer; movPay = s.movPay; entSel = s.entSel; casaSel = s.casaSel; telFilter = s.telFilter;
+  render(); window.scrollTo(0, s.y || 0);
+}
+window.addEventListener('popstate', function(){
+  if (ignorePop) { ignorePop = false; return; }
+  if (sheetPushed) { sheetPushed = false; $('ov').className = 'ov'; sh = null; return; }
+  navPop();
+});
 
 function renderSec(){
   var sec = curSec, C = SECT[sec], st, h = '', i, k, c, d = new Date();
@@ -1269,6 +1291,7 @@ function renderSp(){
   h += '<div class="lbl">Importo</div><input class="amt" id="s_amt" inputmode="decimal" placeholder="0,00" value="' + esc(String(d.amt).replace('.', ',')) + '">';
   h += '<div class="fld"><label>Descrizione' + (SECT[curSec].noteReq ? '' : ' (facoltativa)') + '</label><input id="s_note" placeholder="' + esc(NOTE_PH[curSec] || 'es. dove, cosa') + '" value="' + esc(d.note) + '"></div>';
   h += entChips(d.veh, 'spveh');
+  h += rcBox(d.photo) + rcBtn();
   h += payChips('sppay', d.pay);
   h += '<div style="height:6px"></div><button class="btn" data-act="spsave">Registra</button>';
   $('sheet').innerHTML = h;
@@ -1285,7 +1308,9 @@ function saveSp(){
   var d = sh.d, p = num(d.amt);
   if (!(p > 0)) { toast('Inserisci l\'importo'); return; }
   if (SECT[curSec].noteReq && !d.note) { toast('Scrivi cosa hai comprato'); return; }
-  S.sp.push({ id: Date.now() + '_' + Math.floor(Math.random() * 1e5), t: Date.now(), sec: curSec, cat: d.cat, price: Math.round(p * 100) / 100, note: d.note, pay: d.pay, veh: SECT[curSec].ent ? d.veh : '' });
+  var nsp = { id: Date.now() + '_' + Math.floor(Math.random() * 1e5), t: Date.now(), sec: curSec, cat: d.cat, price: Math.round(p * 100) / 100, note: d.note, pay: d.pay, veh: SECT[curSec].ent ? d.veh : '' };
+  if (d.photo) { rcPut(nsp.id, d.photo); nsp.rc = 1; }
+  S.sp.push(nsp);
   S.lastPay = d.pay;
   save(); closeSheet(); render(); toast(catOf(curSec, 'log', d.cat)[1] + ', ' + eur(p));
 }
@@ -1516,12 +1541,19 @@ function monthMoney(){
     for (i = 0; i < S.inc.log.length; i++) { if (S.inc.log[i].t >= from) bal += S.inc.log[i].amt; }
     var mEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59).getTime();
     for (i = 0; i < S.inc.rec.length; i++) bal += incMonth(S.inc.rec[i]) * occurrences(S.inc.rec[i].day, from, mEnd);
-    for (i = 0; i < S.log.length; i++) { if (S.log[i].t >= from) bal -= S.log[i].price; }
-    for (i = 0; i < S.sp.length; i++) { if (S.sp[i].t >= from) bal -= S.sp[i].price; }
-    for (i = 0; i < A.length; i++) bal -= A[i].m * occurrences(A[i].day, from, mEnd);
+    for (i = 0; i < S.log.length; i++) { if (S.log[i].t >= from && payType(S.log[i].pay) !== 'cash') bal -= S.log[i].price; }
+    for (i = 0; i < S.sp.length; i++) { if (S.sp[i].t >= from && payType(S.sp[i].pay) !== 'cash') bal -= S.sp[i].price; }
+    for (i = 0; i < S.pre.length; i++) { if (S.pre[i].t >= from) bal -= S.pre[i].amt; }
+    for (i = 0; i < A.length; i++) { if (payType(A[i].pay) !== 'cash') bal -= A[i].m * occurrences(A[i].day, from, mEnd); }
     r.bal = bal;
     r.balEnd = bal;
   }
+  /* contanti in tasca: prelievi meno spese pagate in contanti */
+  var cf = S.cashFrom || 0; r.cashIn = 0; r.cashOut = 0; r.cashPreM = 0;
+  for (i = 0; i < S.pre.length; i++) { if (S.pre[i].t >= cf) r.cashIn += S.pre[i].amt; if (S.pre[i].t >= m0) r.cashPreM += S.pre[i].amt; }
+  for (i = 0; i < S.log.length; i++) { if (S.log[i].t >= cf && payType(S.log[i].pay) === 'cash') r.cashOut += S.log[i].price; }
+  for (i = 0; i < S.sp.length; i++) { if (S.sp[i].t >= cf && payType(S.sp[i].pay) === 'cash') r.cashOut += S.sp[i].price; }
+  r.cash = (S.cashBase || 0) + r.cashIn - r.cashOut;
   return r;
 }
 
@@ -1549,6 +1581,7 @@ function renderHub(){
 
   /* FOGLI DEL CRUSCOTTO */
   var HT = [['dash','Cruscotto'],['carte','Carte'],['fisse','Fisse'],['settori','Settori']];
+  if (navStack.length && hubTab !== 'dash') h += backBar();
   h += '<div class="htop"><div class="seg">';
   for (i = 0; i < HT.length; i++) h += '<button data-act="htab" data-v="' + HT[i][0] + '"' + (hubTab === HT[i][0] ? ' class="act"' : '') + '>' + HT[i][1] + '</button>';
   h += '</div><button class="gear" data-act="tab" data-v="set" aria-label="Impostazioni">⚙</button></div>';
@@ -1672,6 +1705,11 @@ function renderInc(){
     h += '<div class="empty">Inserisci il saldo di oggi: da lì l\'app calcola come cambia con entrate e spese.</div><button class="ghost" data-act="banknew">+ Imposta il saldo</button>';
   }
 
+  h += '<h2>Contanti</h2>';
+  h += mrow(ic('Money with wings'), 'Contanti in tasca', 'stima: prelievi ' + eur(M.cashIn) + ' meno spese in contanti ' + eur(M.cashOut), M.cash, 'icash', ' data-act="cashset"');
+  h += '<button class="ghost" data-act="prenew">+ Prelievo bancomat</button>';
+  h += '<div class="hint">Il prelievo esce dal conto e diventa contanti. Le spese pagate in contanti non toccano il conto: scalano i contanti in tasca. Tocca la riga per correggere quanto hai davvero nel portafoglio.</div>';
+
   h += '<h2>Registra un\'entrata</h2><div class="grid">';
   var byc = {};
   for (i = 0; i < S.inc.log.length; i++) { var e = S.inc.log[i]; if (e.t >= m0) { if (!byc[e.cat]) byc[e.cat] = { n:0, s:0 }; byc[e.cat].n++; byc[e.cat].s += e.amt; } }
@@ -1711,6 +1749,7 @@ function syncIn(){ if (sh && sh.kind === 'in' && $('i_amt')) { sh.d.amt = val('i
 function renderIn(){
   var d = sh.d, c = incCat(d.cat), h = '';
   h += '<div class="shead" style="background:linear-gradient(150deg,' + c[3] + ',' + c[4] + ')"><img src="' + ic(c[2]) + '" alt=""><div class="st1">' + c[1] + '</div></div>';
+  h += modeSeg('una');
   h += '<div class="lbl">Importo ricevuto</div><input class="amt" id="i_amt" inputmode="decimal" placeholder="0,00" value="' + esc(String(d.amt).replace('.', ',')) + '">';
   h += '<div class="two"><div class="fld"><label>Data</label><input id="i_date" type="date" value="' + esc(d.date) + '"></div><div class="fld"><label>Nota</label><input id="i_note" placeholder="es. dividendo, vendita BTC" value="' + esc(d.note) + '"></div></div>';
   h += '<div style="height:12px"></div><button class="btn" data-act="insave">Registra entrata</button>';
@@ -1734,7 +1773,8 @@ function openIr(id){
 function syncIr(){ if (sh && sh.kind === 'ir' && $('j_amt')) { sh.d.name = val('j_name'); sh.d.amt = val('j_amt'); sh.d.day = val('j_day'); } }
 function renderIr(){
   var d = sh.d, c = incCat(d.cat), h = '', i;
-  h += '<div class="shead" style="background:linear-gradient(150deg,' + c[3] + ',' + c[4] + ')"><img src="' + ic(c[2]) + '" alt=""><div><div class="st1">' + (sh.id ? 'Modifica entrata' : 'Nuova entrata fissa') + '</div><div class="st2">Arriva da sola nel suo giorno</div></div></div>';
+  h += '<div class="shead" style="background:linear-gradient(150deg,' + c[3] + ',' + c[4] + ')"><img src="' + ic(c[2]) + '" alt=""><div><div class="st1">' + (sh.id ? 'Modifica entrata ricorrente' : 'Entrata ricorrente') + '</div><div class="st2">Arriva da sola nel suo giorno</div></div></div>';
+  if (!sh.id) h += modeSeg('ric');
   h += '<div class="fld"><label>Tipo</label><div class="chips l">';
   for (i = 0; i < INC.length; i++) h += '<button class="chip kchip' + (d.cat === INC[i][0] ? ' act' : '') + '" data-act="ircat" data-v="' + INC[i][0] + '"><img src="' + ic(INC[i][2]) + '" alt="">' + INC[i][1] + '</button>';
   h += '</div></div>';
@@ -1754,6 +1794,116 @@ function saveIr(){
   for (i = 0; i < S.inc.rec.length; i++) { if (S.inc.rec[i].id === r.id) { S.inc.rec[i] = r; done = true; break; } }
   if (!done) S.inc.rec.push(r);
   save(); closeSheet(); render(); toast(r.name + ', +' + eur(incMonth(r)) + ' al mese');
+}
+
+/* ---------- SCONTRINI: foto salvata sul telefono e lettura del totale ---------- */
+var IDB = null;
+function idb(cb){
+  if (IDB) return cb(IDB);
+  try {
+    var rq = indexedDB.open('bi-scontrini', 1);
+    rq.onupgradeneeded = function(){ rq.result.createObjectStore('r'); };
+    rq.onsuccess = function(){ IDB = rq.result; cb(IDB); };
+    rq.onerror = function(){ cb(null); };
+  } catch(x) { cb(null); }
+}
+function rcPut(id, data){ idb(function(db){ if (!db) return; try { db.transaction('r', 'readwrite').objectStore('r').put(data, id); } catch(x) {} }); }
+function rcGet(id, cb){ idb(function(db){ if (!db) return cb(null); try { var q = db.transaction('r').objectStore('r').get(id); q.onsuccess = function(){ cb(q.result || null); }; q.onerror = function(){ cb(null); }; } catch(x) { cb(null); } }); }
+function rcDel(id){ idb(function(db){ if (!db) return; try { db.transaction('r', 'readwrite').objectStore('r').delete(id); } catch(x) {} }); }
+function rcClear(){ idb(function(db){ if (!db) return; try { db.transaction('r', 'readwrite').objectStore('r').clear(); } catch(x) {} }); }
+/* foto ridotta per non riempire il telefono */
+function rcPick(cb){
+  var inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.setAttribute('capture', 'environment');
+  inp.onchange = function(){
+    var f = inp.files && inp.files[0]; if (!f) return;
+    var rd = new FileReader();
+    rd.onload = function(e){
+      var img = new Image();
+      img.onload = function(){
+        var mx = 1400, w = img.width, h = img.height, k = Math.min(1, mx / Math.max(w, h)), c = document.createElement('canvas');
+        c.width = Math.round(w * k); c.height = Math.round(h * k);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        cb(c.toDataURL('image/jpeg', 0.72));
+      };
+      img.src = e.target.result;
+    };
+    rd.readAsDataURL(f);
+  };
+  inp.click();
+}
+/* legge il testo dello scontrino (serve internet la prima volta) e cerca totale e data */
+function parseReceipt(text){
+  var lines = String(text || '').split(/\n/), best = 0, any = 0, i, m, re = /(\d{1,4}(?:[.\s]\d{3})*[.,]\d{2})(?!\d)/g, v, key, date = '';
+  function toNum(s){ s = s.replace(/\s/g, ''); if (/,\d{2}$/.test(s)) s = s.replace(/\./g, '').replace(',', '.'); else s = s.replace(/,/g, ''); return parseFloat(s); }
+  for (i = 0; i < lines.length; i++) {
+    key = /(TOTALE|TOTAL|IMPORTO\s*PAGATO|PAGATO|DA\s*PAGARE|CONTANTE|CARTA|BANCOMAT|EURO|EUR)/i.test(lines[i]) && !/(SUBTOTALE|IVA|RESTO|SCONTO)/i.test(lines[i]);
+    re.lastIndex = 0;
+    while ((m = re.exec(lines[i])) !== null) {
+      v = toNum(m[1]);
+      if (!(v > 0) || v > 20000) continue;
+      if (key && /TOTAL/i.test(lines[i]) && v > best) best = v;
+      if (v > any) any = v;
+    }
+    if (!date) { m = /(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/.exec(lines[i]); if (m) { var yy = +m[3]; if (yy < 100) yy += 2000; if (+m[2] >= 1 && +m[2] <= 12 && +m[1] >= 1 && +m[1] <= 31) date = yy + '-' + pad(+m[2]) + '-' + pad(+m[1]); } }
+  }
+  return { amt: best || any || 0, date: date, sure: !!best };
+}
+var OCR_URL = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+function rcOcr(url, cb){
+  function run(){ try { window.Tesseract.recognize(url, 'ita').then(function(r){ cb(parseReceipt(r && r.data ? r.data.text : '')); }, function(){ cb(null); }); } catch(x) { cb(null); } }
+  if (window.Tesseract) return run();
+  var s = document.createElement('script'); s.src = OCR_URL; s.onload = run; s.onerror = function(){ cb(null); };
+  document.head.appendChild(s);
+}
+function rcBox(photo){ return photo ? '<div class="rcbox"><img src="' + photo + '" alt="Scontrino"><span>Scontrino allegato</span><button class="x" data-act="rcrm">×</button></div>' : ''; }
+function rcBtn(){ return '<button class="ghost rcb" data-act="rcscan">📷 Fotografa lo scontrino</button>'; }
+function reSheet(){ if (!sh) return; if (sh.kind === 'sp') renderSp(); else if (sh.kind === 'mv') renderMv(); else if (!sh.kind) renderSheet(); }
+function rcScan(){
+  rcPick(function(url){
+    if (!sh) return;
+    var tgt = sh.kind ? sh.d : sh;
+    tgt.photo = url; reSheet(); toast('Leggo lo scontrino…');
+    rcOcr(url, function(res){
+      if (!sh) return;
+      tgt = sh.kind ? sh.d : sh;
+      if (res && res.amt > 0) {
+        var s2 = res.amt.toFixed(2).replace('.', ',');
+        if (sh.kind) tgt.amt = s2; else tgt.price = sh.kind ? s2 : (isFree(getItem(sh.id)) ? s2 : res.amt);
+        if (res.date && sh.kind === 'mv') tgt.date = res.date;
+        reSheet(); toast('Totale letto: ' + eur(res.amt) + (res.sure ? '' : ' (controlla)'));
+      } else toast('Non riesco a leggere il totale: scrivilo tu');
+    });
+  });
+}
+
+/* scheda: prelievo bancomat */
+function openPre(){
+  sh = { kind:'pre', d:{ amt:'', date: todayStr(), note:'' } };
+  var h = '<div class="shead" style="background:linear-gradient(150deg,#45a672,#1f5a3a)"><img src="' + ic('Money with wings') + '" alt=""><div><div class="st1">Prelievo bancomat</div><div class="st2">Esce dal conto, entra in tasca</div></div></div>';
+  h += '<div class="lbl">Importo prelevato</div><input class="amt" id="p_amt" inputmode="decimal" placeholder="0,00">';
+  h += '<div class="two"><div class="fld"><label>Data</label><input id="p_date" type="date" value="' + todayStr() + '"></div><div class="fld"><label>Nota</label><input id="p_note" placeholder="es. bancomat MPS"></div></div>';
+  h += '<div style="height:12px"></div><button class="btn" data-act="presave">Registra prelievo</button>';
+  $('sheet').innerHTML = h; $('ov').className = 'ov show';
+}
+function savePre(){
+  var a = num(val('p_amt')), ds = val('p_date'), p = String(ds).split('-'), tt = Date.now();
+  if (!(a > 0)) { toast('Inserisci l\'importo'); return; }
+  if (p.length === 3 && ds !== todayStr()) { var dt = new Date(+p[0], +p[1] - 1, +p[2], 12); if (!isNaN(dt.getTime())) tt = dt.getTime(); }
+  S.pre.push({ id:'p' + Date.now(), t:tt, amt: Math.round(a * 100) / 100, note: val('p_note') });
+  save(); closeSheet(); render(); toast('Prelievo ' + eur(a));
+}
+function openCashSet(){
+  sh = { kind:'cash' };
+  var h = '<div class="shead" style="background:linear-gradient(150deg,#45a672,#1f5a3a)"><img src="' + ic('Money with wings') + '" alt=""><div><div class="st1">Contanti in tasca</div><div class="st2">Quanto hai adesso nel portafoglio</div></div></div>';
+  h += '<div class="lbl">Contanti di adesso</div><input class="amt" id="c_amt" inputmode="decimal" placeholder="0,00">';
+  h += '<div class="hint">Da qui in poi l\'app aggiunge i prelievi e toglie le spese in contanti.</div><div style="height:12px"></div><button class="btn" data-act="cashsave">Salva</button>';
+  $('sheet').innerHTML = h; $('ov').className = 'ov show';
+}
+function saveCash(){
+  var a = num(val('c_amt'));
+  if (isNaN(a)) { toast('Inserisci la cifra'); return; }
+  S.cashBase = Math.round(a * 100) / 100; S.cashFrom = Date.now();
+  save(); closeSheet(); render(); toast('Contanti aggiornati');
 }
 
 /* scheda: saldo del conto */
@@ -1776,7 +1926,7 @@ function saveBank(){
 
 /* ---------- RICORRENTI (tutte le spese fisse) ---------- */
 function renderRic(){
-  var R = recurring(), tot = R.tot, h = '', i, k, all = [], x;
+  var R = recurring(), tot = R.tot, h = navStack.length ? backBar() : '', i, k, all = [], x;
   h += '<div class="hero black"><div class="date">Spese fisse ricorrenti</div>' + meter(tot, 'ric');
   h += '<div class="hint" style="margin-top:0">' + eur(tot * 12) + ' l\'anno, tutto quello che ti viene addebitato da solo. Tocca una voce per modificarla.</div></div>';
   h += '<button class="ghost" data-act="ricnew" style="margin:0 0 6px">+ Nuova spesa ricorrente</button>';
@@ -1834,6 +1984,8 @@ function movRows(a, b){
     L.push({ t:e.t, src:'sp', id:e.id, v:-e.price, pay:e.pay || '', name:c[1], img:ic(c[2]), sub:SECT[e.sec].name + (e.note ? ', ' + e.note : '') + (x ? ', ' + x.name : '') }); }
   for (i = 0; i < S.inc.log.length; i++) { e = S.inc.log[i]; if (e.t < a || e.t >= b) continue; c = incCat(e.cat);
     L.push({ t:e.t, src:'inc', id:e.id, v:e.amt, pay:'', name:c[1], img:ic(c[2]), sub:'Entrata extra' + (e.note ? ', ' + e.note : '') }); }
+  for (i = 0; i < S.pre.length; i++) { e = S.pre[i]; if (e.t < a || e.t >= b) continue;
+    L.push({ t:e.t, src:'pre', id:e.id, v:0, amt:e.amt, pay:'', name:'Prelievo contanti', img:ic('Money with wings'), sub:'dal conto al portafoglio' + (e.note ? ', ' + e.note : '') }); }
   L.sort(function(p, q){ return q.t - p.t; });
   return L;
 }
@@ -1841,7 +1993,7 @@ function renderMov(){
   var r = range(movPer), L = movRows(r[0], r[1]), h = '', i, x, out = 0, inn = 0, day = '', dk, dt, tday = {}, P = [['oggi','Oggi'],['7','7 giorni'],['mese','Mese']];
   if (movPay) { var F = []; for (i = 0; i < L.length; i++) { if (L[i].pay === movPay) F.push(L[i]); } L = F; }
   for (i = 0; i < L.length; i++) { x = L[i]; if (x.v < 0) out -= x.v; else inn += x.v; dk = ymd(x.t); if (x.v < 0) tday[dk] = (tday[dk] || 0) - x.v; }
-  h += '<div class="seg">';
+  h += (navStack.length ? backBar() : '') + '<div class="seg">';
   for (i = 0; i < P.length; i++) h += '<button data-act="mper" data-v="' + P[i][0] + '"' + (movPer === P[i][0] ? ' class="act"' : '') + '>' + P[i][1] + '</button>';
   h += '</div><div class="hero"><div class="date">Spese ' + (movPer === 'oggi' ? 'di oggi' : movPer === '7' ? 'degli ultimi 7 giorni' : 'di ' + MM[new Date().getMonth()]) + '</div>' + meter(out, 'mov');
   h += '<div class="hint">' + L.length + (L.length === 1 ? ' movimento' : ' movimenti') + (inn > 0 ? ', entrate extra ' + eur(inn) : '') + '. Tocca una riga per modificarla. Le ricorrenti sono nella loro pagina.</div></div>';
@@ -1852,7 +2004,7 @@ function renderMov(){
     if (dk !== day) { day = dk; dt = new Date(x.t); h += '<div class="dayh"><span>' + GG[dt.getDay()] + ' ' + dt.getDate() + ' ' + MM[dt.getMonth()] + '</span><b>' + eur(tday[dk] || 0) + '</b></div>'; }
     dt = new Date(x.t);
     h += '<div class="row rb" data-act="mvedit" data-src="' + x.src + '" data-id="' + x.id + '"><span class="tm">' + pad(dt.getHours()) + ':' + pad(dt.getMinutes()) + '</span><img src="' + x.img + '" alt="" style="width:24px;height:24px"><span>' + esc(x.name) +
-      ' <span class="wh">' + esc(x.sub + (x.pay ? ', ' + x.pay : '')) + '</span></span><span class="pr' + (x.v > 0 ? ' pos' : '') + '">' + (x.v > 0 ? '+' : '') + eur(Math.abs(x.v)) + '</span><span class="chev">›</span></div>';
+      ' <span class="wh">' + esc(x.sub + (x.pay ? ', ' + x.pay : '')) + '</span></span><span class="pr' + (x.v > 0 ? ' pos' : '') + (x.src === 'pre' ? ' pre' : '') + '">' + (x.src === 'pre' ? '⇄ ' + eur(x.amt) : (x.v > 0 ? '+' : '') + eur(Math.abs(x.v))) + '</span><span class="chev">›</span></div>';
   }
   return h;
 }
@@ -1868,7 +2020,7 @@ function payMonth(){
 }
 function creditMonth(){ var P = payMonth(), k, s = 0; for (k in P) { if (P.hasOwnProperty(k) && payType(k) === 'credito') s += P[k].tue + P[k].prog; } return s; }
 function renderCarte(){
-  var P = payMonth(), h = '', i, k, ty, tot, sub, names, j, n, PI = { credito:'Credit card', debito:'Credit card', rid:'Bank', wallet:'Mobile phone', '':'Receipt' };
+  var P = payMonth(), h = '', i, k, ty, tot, sub, names, j, n, PI = { credito:'Credit card', debito:'Credit card', rid:'Bank', wallet:'Mobile phone', cash:'Money with wings', '':'Receipt' };
   var cr = 0, crt = 0, crp = 0;
   for (k in P) { if (P.hasOwnProperty(k) && payType(k) === 'credito') { crt += P[k].tue; crp += P[k].prog; } }
   cr = crt + crp;
@@ -1893,7 +2045,7 @@ function renderCarte(){
 function renderOggi(){
   var r = range('oggi'), es = entries(r[0], r[1]), a = aggregate(es), d = new Date(), h = '', i, it, b, sub;
   var pm = a.tot ? Math.round(a.me / a.tot * 100) : 0;
-  h += cibSeg();
+  h += (navStack.length ? backBar() : '') + cibSeg();
   h += '<div class="hero"><div class="date">' + GG[d.getDay()] + ' ' + d.getDate() + ' ' + MM[d.getMonth()] + '</div>';
   h += meter(a.tot, 'oggi');
   h += '<div class="hint">' + es.length + (es.length === 1 ? ' movimento' : ' movimenti') + ' oggi. Tocca un movimento per modificarlo.</div></div>';
@@ -1938,7 +2090,7 @@ function renderOggi(){
 function renderNumeri(){
   var r = range(period), es = entries(r[0], r[1]), a = aggregate(es), days = r[2], h = '', i, k;
   var P = [['oggi','Oggi'],['7','7 giorni'],['mese','Mese'],['30','30 giorni']];
-  h += cibSeg() + '<div class="seg">';
+  h += (navStack.length ? backBar() : '') + cibSeg() + '<div class="seg">';
   for (i = 0; i < P.length; i++) h += '<button data-act="per" data-v="' + P[i][0] + '"' + (period === P[i][0] ? ' class="act"' : '') + '>' + P[i][1] + '</button>';
   h += '</div>';
   var avg = a.tot / days;
@@ -2010,7 +2162,9 @@ function renderSet(){
     (S.lastBackup ? ' Ultimo backup: ' + shortDate(S.lastBackup) + '.' : ' Nessun backup ancora.') + '</div>';
   h += '<button class="btn" data-act="bkexp">Salva backup</button><button class="ghost" data-act="bkimp">Ripristina da backup</button>';
   h += '<h2>Dati</h2><button class="ghost" data-act="csv">Esporta CSV (per Excel)</button>';
-  h += '<button class="ghost danger" data-act="reset">Azzera tutti i movimenti</button>';
+  h += '<h2>Azzeramento</h2>';
+  h += '<button class="ghost danger" data-act="reset">Azzera i movimenti</button><div class="hint">Cancella spese, entrate extra e prelievi registrati. Restano ricorrenti, entrate fisse, case, telefonia, carte e saldo.</div>';
+  h += '<button class="ghost danger" data-act="resetall" style="margin-top:14px">Reset totale</button><div class="hint">Cancella proprio tutto e riparte da zero, come appena installata. Prima salva un backup se ti serve.</div>';
   h += '<div class="hint" style="margin-top:16px">iPhone: Safari → Condividi → "Aggiungi alla schermata Home".<br>Android: Chrome → menu ⋮ → "Aggiungi a schermata Home".<br>I dati restano sul singolo dispositivo: iPhone e Samsung hanno archivi separati.</div>';
   h += '<div class="credit">Foto: <a href="https://unsplash.com" target="_blank" rel="noopener">Unsplash</a> (licenza Unsplash). Icone di riserva offline: Microsoft Fluent Emoji (MIT).</div></div>';
   return h;
@@ -2023,7 +2177,7 @@ function openSheet(id){
   if (it.variants) { sh.v = 0; sh.price = it.variants[0][1]; }
   renderSheet(); $('ov').className = 'ov show';
 }
-function closeSheet(){ $('ov').className = 'ov'; sh = null; }
+function closeSheet(){ $('ov').className = 'ov'; sh = null; if (sheetPushed) { sheetPushed = false; ignorePop = true; try { history.back(); } catch(x) { ignorePop = false; } } }
 function syncAmt(){
   if (!sh || sh.kind) return;
   var a = $('amt'), p = $('pin'), n;
@@ -2046,10 +2200,10 @@ function renderSheet(){
     h += '<div class="lbl">Per quante persone hai pagato</div><div class="stepper"><button data-act="x-">−</button><span class="v">' + sh.pax + '</span><button data-act="x+">+</button></div>';
     n = num(sh.price);
     h += '<div class="perhead">' + (n > 0 ? 'A testa <b>' + eur(n / sh.pax) + '</b>' : 'Inserisci il totale') + '</div>';
-    h += payChips('fpay', sh.pay) + '<button class="btn" data-act="add">Registra' + (it.meal ? ' ' + sh.meal : '') + '</button>';
+    h += rcBox(sh.photo) + rcBtn() + payChips('fpay', sh.pay) + '<button class="btn" data-act="add">Registra' + (it.meal ? ' ' + sh.meal : '') + '</button>';
   } else if (it.type === 'amount') {
     h += '<div class="lbl">Totale scontrino</div><input class="amt" id="amt" inputmode="decimal" placeholder="0,00" value="' + esc(String(sh.price).replace('.', ',')) + '">';
-    h += payChips('fpay', sh.pay) + '<div style="height:6px"></div><button class="btn" data-act="add">Registra spesa</button>';
+    h += rcBox(sh.photo) + rcBtn() + payChips('fpay', sh.pay) + '<div style="height:6px"></div><button class="btn" data-act="add">Registra spesa</button>';
   } else {
     if (it.variants) {
       h += '<div class="chips" style="margin-top:14px">';
@@ -2073,6 +2227,7 @@ function addEntry(){
     e = { id: now + '_' + i + '_' + Math.floor(Math.random() * 1e5), t: now, item: it.id, price: p, pay: sh.pay };
     if (it.type === 'pax') { e.pax = sh.pax; e.who = 0; if (it.meal) e.meal = sh.meal; }
     if (it.variants && sh.v >= 0) e.v = it.variants[sh.v][0];
+    if (i === 0 && sh.photo) { rcPut(e.id, sh.photo); e.rc = 1; }
     S.log.push(e);
   }
   if (sh.def && !free && !it.variants) it.price = p;
@@ -2082,13 +2237,13 @@ function addEntry(){
 }
 
 /* ---------- MODIFICA DI UN MOVIMENTO GIÀ REGISTRATO ---------- */
-function mvList(src){ return src === 'log' ? S.log : src === 'sp' ? S.sp : S.inc.log; }
+function mvList(src){ return src === 'log' ? S.log : src === 'sp' ? S.sp : src === 'pre' ? S.pre : S.inc.log; }
 function mvIndex(src, id){ var L = mvList(src), i; for (i = 0; i < L.length; i++) { if (L[i].id === id) return i; } return -1; }
 function ymd(ts){ var x = new Date(ts); return x.getFullYear() + '-' + pad(x.getMonth() + 1) + '-' + pad(x.getDate()); }
 function openMv(src, id){
   var idx = mvIndex(src, id); if (idx < 0) return;
   var e = mvList(src)[idx];
-  sh = { kind:'mv', src:src, id:id, d:{ amt: (src === 'inc' ? e.amt : e.price).toFixed(2).replace('.', ','), date: ymd(e.t), note: e.note || '', cat: e.cat, item: e.item, sec: e.sec, pax: e.pax || 0, meal: e.meal || '', veh: e.veh || '', v: e.v || '', pay: e.pay || '' } };
+  sh = { kind:'mv', src:src, id:id, d:{ amt: (src === 'inc' || src === 'pre' ? e.amt : e.price).toFixed(2).replace('.', ','), date: ymd(e.t), note: e.note || '', cat: e.cat, item: e.item, sec: e.sec, pax: e.pax || 0, meal: e.meal || '', veh: e.veh || '', v: e.v || '', pay: e.pay || '', rc: !!e.rc } };
   renderMv(); $('ov').className = 'ov show';
 }
 function syncMv(){ if (sh && sh.kind === 'mv' && $('m_amt')) { sh.d.amt = val('m_amt'); sh.d.date = val('m_date'); sh.d.note = val('m_note'); } }
@@ -2109,6 +2264,8 @@ function renderMv(){
     h += '<div class="fld"><label>Categoria</label><div class="chips l">';
     for (i = 0; i < SECT[d.sec].log.length; i++) { c = SECT[d.sec].log[i]; h += '<button class="chip kchip' + (d.cat === c[0] ? ' act' : '') + '" data-act="mvcat" data-v="' + c[0] + '"><img src="' + ic(c[2]) + '" alt="">' + esc(c[1]) + '</button>'; }
     h += '</div></div>';
+  } else if (sh.src === 'pre') {
+    h += '<div class="shead" style="background:linear-gradient(150deg,#45a672,#1f5a3a)"><img src="' + ic('Money with wings') + '" alt=""><div><div class="st1">Prelievo bancomat</div><div class="st2">Modifica</div></div></div>';
   } else {
     c = incCat(d.cat);
     h += '<div class="shead" style="background:linear-gradient(150deg,' + c[3] + ',' + c[4] + ')"><img src="' + ic(c[2]) + '" alt=""><div><div class="st1">' + c[1] + '</div><div class="st2">Modifica entrata</div></div></div>';
@@ -2128,9 +2285,13 @@ function renderMv(){
       h += '</div></div>';
     }
   }
-  if (sh.src !== 'inc') h += payChips('mvpay', d.pay);
+  if (sh.src === 'log' || sh.src === 'sp') {
+    h += d.photo ? rcBox(d.photo) : (d.rc ? '<div class="rcbox"><img id="m_rc" alt="Scontrino"><span>Scontrino allegato</span><button class="x" data-act="rcrm">×</button></div>' : '');
+    h += rcBtn() + payChips('mvpay', d.pay);
+  }
   h += '<div style="height:14px"></div><button class="btn" data-act="mvsave">Salva modifiche</button><button class="btn2" data-act="mvdel">Elimina movimento</button>';
   $('sheet').innerHTML = h;
+  if (!d.photo && d.rc) rcGet(sh.id, function(u){ var im = $('m_rc'); if (im && u) im.src = u; });
 }
 function saveMv(){
   syncMv();
@@ -2144,11 +2305,13 @@ function saveMv(){
     nt = new Date(+p[0], +p[1] - 1, +p[2], old.getHours(), old.getMinutes(), old.getSeconds(), old.getMilliseconds());
     if (!isNaN(nt.getTime())) e.t = nt.getTime();
   }
-  if (sh.src === 'inc') e.amt = a; else e.price = a;
+  if (sh.src === 'inc' || sh.src === 'pre') e.amt = a; else e.price = a;
   e.note = d.note;
-  if (sh.src !== 'log') e.cat = d.cat;
+  if (sh.src === 'sp' || sh.src === 'inc') e.cat = d.cat;
   if (sh.src === 'sp') e.veh = d.veh;
-  if (sh.src !== 'inc') e.pay = d.pay;
+  if (sh.src === 'log' || sh.src === 'sp') e.pay = d.pay;
+  if (d.photo) { rcPut(e.id, d.photo); e.rc = 1; }
+  else if (!d.rc && e.rc) { rcDel(e.id); e.rc = 0; }
   if (d.pax) e.pax = d.pax;
   if (d.meal) e.meal = d.meal;
   if (d.v) e.v = d.v;
@@ -2225,7 +2388,17 @@ document.addEventListener('click', function(ev){
   if (!el || el === document.body) return;
   var a = el.getAttribute('data-act'), i, it;
   if (sh) { syncAmt(); syncLine(); syncBill(); syncHome(); syncSp(); syncRec(); syncEnt(); syncSecEd(); syncIn(); syncIr(); syncMv(); }
+  if (a === 'back') { goBack(); return; }
+  if (a === 'tab' && (view !== el.getAttribute('data-v') || (el.getAttribute('data-s') && el.getAttribute('data-s') !== curSec))) navPush();
+  if (a === 'htab' && (view !== 'home' || hubTab !== el.getAttribute('data-v'))) navPush();
+  if (a === 'mpayset') navPush();
   if (a === 'tab') { view = el.getAttribute('data-v'); if (el.getAttribute('data-s')) { if (curSec !== el.getAttribute('data-s')) entSel = ''; curSec = el.getAttribute('data-s'); } render(); window.scrollTo(0, 0); }
+  else if (a === 'prenew') openPre();
+  else if (a === 'presave') savePre();
+  else if (a === 'cashset') openCashSet();
+  else if (a === 'cashsave') saveCash();
+  else if (a === 'rcscan') rcScan();
+  else if (a === 'rcrm') { if (sh.kind) { sh.d.photo = ''; sh.d.rc = false; } else sh.photo = ''; reSheet(); }
   else if (a === 'htab') { hubTab = el.getAttribute('data-v'); view = 'home'; render(); window.scrollTo(0, 0); }
   else if (a === 'mper') { movPer = el.getAttribute('data-v'); render(); }
   else if (a === 'mpay') { movPay = el.getAttribute('data-v'); render(); }
@@ -2249,6 +2422,13 @@ document.addEventListener('click', function(ev){
     else if (rk === 'bill') openBill(el.getAttribute('data-id'));
     else { curSec = el.getAttribute('data-s'); openRec(el.getAttribute('data-id')); }
   }
+  else if (a === 'mode' && sh && sh.kind === 'in' && el.getAttribute('data-v') === 'ric') {
+    sh = { kind:'ir', id:'', d:{ cat:sh.d.cat, name:'', amt:sh.d.amt, freq:1, day:'' } }; renderIr();
+  }
+  else if (a === 'mode' && sh && sh.kind === 'ir' && el.getAttribute('data-v') === 'una') {
+    sh = { kind:'in', d:{ cat:sh.d.cat, amt:sh.d.amt, note:'', date: todayStr() } }; renderIn();
+  }
+  else if (a === 'mode' && sh && (sh.kind === 'in' || sh.kind === 'ir')) {}
   else if (a === 'mode') {
     var mv = el.getAttribute('data-v');
     if (mv === 'ric' && sh.kind === 'sp') {
@@ -2276,7 +2456,7 @@ document.addEventListener('click', function(ev){
   else if (a === 'mvsave') saveMv();
   else if (a === 'mvdel') {
     if (!confirm('Eliminare questo movimento?')) return;
-    var mi = mvIndex(sh.src, sh.id); if (mi >= 0) mvList(sh.src).splice(mi, 1);
+    var mi = mvIndex(sh.src, sh.id); if (mi >= 0) { if (mvList(sh.src)[mi].rc) rcDel(sh.id); mvList(sh.src).splice(mi, 1); }
     save(); closeSheet(); render(); toast('Eliminato');
   }
   else if (a === 'innew') openIn(el.getAttribute('data-k'));
@@ -2430,11 +2610,25 @@ document.addEventListener('click', function(ev){
   else if (a === 'csv') exportCsv();
   else if (a === 'bkexp') exportBackup();
   else if (a === 'bkimp') importBackup();
-  else if (a === 'reset') { if (confirm('Cancellare tutti i movimenti?')) { S.log = []; save(); render(); toast('Azzerato'); } }
+  else if (a === 'reset') {
+    if (!confirm('Cancellare tutti i movimenti (spese, entrate extra, prelievi)? Le ricorrenti restano.')) return;
+    S.log = []; S.sp = []; S.inc.log = []; S.pre = []; S.cashBase = 0; S.cashFrom = 0; rcClear(); save(); render(); toast('Movimenti azzerati');
+  }
+  else if (a === 'resetall') {
+    if (!confirm('Reset totale: cancello TUTTO, anche ricorrenti, entrate fisse, case, telefonia e saldo. Procedo?')) return;
+    if (!confirm('Sicuro? Non si può annullare.')) return;
+    try { localStorage.removeItem(KEY); localStorage.removeItem(OLDKEY); } catch(x) {}
+    S = null; rcClear(); load(); buildSect(); navStack = []; view = 'home'; hubTab = 'dash'; render(); toast('App azzerata');
+  }
 });
 
+document.addEventListener('click', function(){
+  var open = $('ov').className.indexOf('show') >= 0;
+  if (open && !sheetPushed) { sheetPushed = true; try { history.pushState({ sheet:1 }, ''); } catch(x) {} }
+}, false);
+
 document.addEventListener('input', function(ev){
-  if (!sh || sh.kind === 'line' || sh.kind === 'home' || sh.kind === 'sp' || sh.kind === 'ent' || sh.kind === 'secd' || sh.kind === 'in' || sh.kind === 'ir' || sh.kind === 'bank' || sh.kind === 'mv') return;
+  if (!sh || sh.kind === 'line' || sh.kind === 'home' || sh.kind === 'sp' || sh.kind === 'ent' || sh.kind === 'secd' || sh.kind === 'in' || sh.kind === 'ir' || sh.kind === 'bank' || sh.kind === 'mv' || sh.kind === 'pre' || sh.kind === 'cash' || sh.kind === 'pick') return;
   if (sh.kind === 'rec') {
     if (ev.target.id === 'r_amt') { sh.d.amt = ev.target.value; var rp = $('r_prev'); if (rp) rp.innerHTML = recPreview(); }
     return;
@@ -2476,7 +2670,7 @@ document.addEventListener('change', function(ev){
   save();
 });
 
-load(); buildSect(); render();
+load(); buildSect(); try { history.replaceState({ root:1 }, ''); } catch(x) {} render();
 try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(x) {}
 try { if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js'); } catch(x) {}
 </script>
