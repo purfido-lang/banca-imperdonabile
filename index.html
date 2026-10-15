@@ -468,6 +468,7 @@ div.clock,div.hubt{cursor:default}
 .ptitle b{display:block;font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:#16171a}
 .ptitle i{display:block;font-style:normal;font-size:13px;color:#6b707a}
 .cardline .chev{color:#9aa0aa}
+.cnt.rr{right:auto;left:10px}
 </style>
 </head>
 <body>
@@ -780,22 +781,28 @@ function casaStats(homeId){
   return r;
 }
 function onceGrid(sec){
-  var C = SECT[sec], st = secStats(sec, true), h = '<h2>Spesa una tantum <small>' + eur(st.log) + ' nel mese</small></h2><div class="grid">', i, c, k;
+  var C = SECT[sec], st = secStats(sec, true), h = '<h2>Scegli la voce <small>poi una tantum o ricorrente</small></h2><div class="grid">', i, c, k, kr;
+  if (sec === 'tel') {
+    var ts = telStats();
+    h += '<button class="ktile' + (ts.n ? '' : ' dimk') + '" data-act="lnew" style="background:linear-gradient(150deg,#e60000,#5a0a0a)">' + (ts.n ? '<span class="cnt">' + ts.n + (ts.n === 1 ? ' linea' : ' linee') + '</span>' : '') +
+      '<img src="' + ic('Antenna bars') + '" alt=""><div><div class="kn">Abbonamento</div><div class="kp">Vodafone, TIM, Wind, Iliad…</div><div class="kv">' + eur(ts.month) + '</div></div></button>';
+  }
   for (i = 0; i < C.log.length; i++) {
-    c = C.log[i]; k = st.byCat[c[0]];
-    h += '<button class="ktile' + (k ? '' : ' dimk') + '" data-act="spnew2" data-s="' + sec + '" data-k="' + c[0] + '" style="background:linear-gradient(150deg,' + c[3] + ',' + c[4] + ')">' +
-      (k ? '<span class="cnt">×' + k.n + '</span>' : '') + '<img src="' + ic(c[2]) + '" alt=""><div><div class="kn">' + esc(c[1]) + '</div><div class="kv">' + eur(k ? k.s : 0) + '</div></div></button>';
+    c = C.log[i]; k = st.byCat[c[0]]; kr = st.byRec[c[0]] || 0;
+    h += '<button class="ktile' + (k || kr ? '' : ' dimk') + '" data-act="spnew2" data-s="' + sec + '" data-k="' + c[0] + '" style="background:linear-gradient(150deg,' + c[3] + ',' + c[4] + ')">' +
+      (k ? '<span class="cnt">×' + k.n + '</span>' : '') + (kr ? '<span class="cnt rr">↻</span>' : '') + '<img src="' + ic(c[2]) + '" alt=""><div><div class="kn">' + esc(c[1]) + '</div><div class="kv">' + eur((k ? k.s : 0) + kr) + '</div></div></button>';
   }
   return h + '</div>';
 }
 function renderCasa(){
   var H = S.casa.homes, all = casaStats(''), h = backBar(), i, k, hm, st;
   if (!casaSel || !getHome(casaSel)) casaSel = H.length ? H[0].id : '';
-  h += '<div class="hero"><div class="date">Casa e utenze, questo mese</div>' + meter(all.month + secStats('casa', true).log, 'casa');
+  var csx = secStats('casa', true);
+  h += '<div class="hero"><div class="date">Casa e utenze, questo mese</div>' + meter(all.month + csx.log + csx.rec, 'casa');
   h += '<div class="hint" style="margin-top:0">' + eur(all.month * 12) + ' l\'anno · ' + H.length + (H.length === 1 ? ' casa' : ' case') + ' · ' + all.n + ' voci</div></div>';
 
   h += onceGrid('casa');
-  h += '<h2>Le tue case <small>bollette e affitto ricorrenti</small></h2><div class="car">';
+  h += '<h2>Le tue case</h2><div class="car">';
   for (i = 0; i < H.length; i++) {
     hm = H[i]; st = casaStats(hm.id);
     h += '<button class="hc' + (hm.id === casaSel ? ' sel' : '') + '" data-act="hsel" data-id="' + hm.id + '"><img src="' + homeIcon(hm) + '" alt="">' +
@@ -956,12 +963,13 @@ function telStats(){
 }
 function renderTel(){
   var t = telStats(), L = S.tel.lines, h = backBar(), i, k, l, ri, o;
-  h += '<div class="hero"><div class="date">Telefonia, questo mese</div>' + meter(t.month + secStats('tel', true).log, 'tel');
-  h += '<div class="hint" style="margin-top:0">' + eur(t.month * 12) + ' l\'anno · canoni ' + eur(t.fees) + ' + rate ' + eur(t.rate) +
+  var tsx = secStats('tel', true);
+  h += '<div class="hero"><div class="date">Telefonia, questo mese</div>' + meter(t.month + tsx.log + tsx.rec, 'tel');
+  h += '<div class="hint" style="margin-top:0">Abbonamenti ' + eur(t.month) + ' (canoni ' + eur(t.fees) + ' + rate ' + eur(t.rate) + '), altre ricorrenti ' + eur(tsx.rec) + ', una tantum ' + eur(tsx.log) +
     (t.resid ? ' · debito rate residuo ' + eur(t.resid) : '') + '</div></div>';
 
   h += onceGrid('tel');
-  h += '<h2>Linee e operatori <small>ricorrenti</small></h2><div class="car">';
+  h += '<h2>Le tue linee</h2><div class="car">';
   for (i = 0; i < OPS.length; i++) {
     o = OPS[i]; var b = t.byOp[o[0]];
     if (!b) continue;
@@ -1032,7 +1040,8 @@ function chipRow(act, list, cur, labelIdx){
 }
 function renderLine(){
   var d = sh.d, h = '', i, o;
-  h += '<div class="serif" style="font-size:24px;text-align:center">' + (sh.idx >= 0 ? 'Modifica linea' : 'Nuova linea') + '</div>';
+  h += '<div class="serif" style="font-size:24px;text-align:center">' + (sh.idx >= 0 ? 'Modifica abbonamento' : 'Abbonamento telefonico') + '</div>';
+  if (sh.idx < 0) h += modeSeg('ric');
   h += '<div class="fld"><label>Operatore</label><div class="chips l">';
   for (i = 0; i < OPS.length; i++) {
     o = OPS[i];
@@ -1055,8 +1064,8 @@ function renderLine(){
   } else {
     h += '<input type="hidden" id="l_dev"><input type="hidden" id="l_amt"><input type="hidden" id="l_n"><input type="hidden" id="l_start">';
   }
-  h += '<div style="height:14px"></div><button class="btn" data-act="lsave">Salva linea</button>';
-  if (sh.idx >= 0) h += '<button class="btn2" data-act="ldel">Elimina linea</button>';
+  h += '<div style="height:14px"></div><button class="btn" data-act="lsave">Salva abbonamento</button>';
+  if (sh.idx >= 0) h += '<button class="btn2" data-act="ldel">Elimina abbonamento</button>';
   $('sheet').innerHTML = h;
 }
 function saveLine(){
@@ -1233,7 +1242,7 @@ function renderSec(){
 
   if (C.ent) {
     var EL = entList(sec);
-    h += '<h2>' + C.ent.many + '</h2><div class="car"><button class="hc' + (!entSel ? ' sel' : '') + '" data-act="esel" data-id="" style="flex:0 0 118px"><img src="' + entIcon(sec, null) + '" alt=""><div class="hn">Tutti</div></button>';
+    h += '<h2>' + C.ent.many + '</h2><div class="car"><button class="hc' + (!entSel ? ' sel' : '') + '" data-act="esel" data-id="" style="flex:0 0 118px"><img src="' + entIcon(sec, null) + '" alt=""><div class="hn">Tutti</div><div><span class="st">totale</span></div><div class="hv">' + eur(secStats(sec, true).rec + secStats(sec, true).log) + '</div></button>';
     for (i = 0; i < EL.length; i++) {
       var v = EL[i], vs = 0, j;
       for (j = 0; j < S.sp.length; j++) { if (S.sp[j].veh === v.id && S.sp[j].t >= range('mese')[0]) vs += S.sp[j].price; }
@@ -1254,10 +1263,10 @@ function renderSec(){
   if (AC.length) {
     h += '<h2>Scegli la voce <small>poi una tantum o ricorrente</small></h2><div class="grid">';
     for (i = 0; i < AC.length; i++) {
-      c = AC[i]; k = st.byCat[c[0]];
-      h += '<button class="ktile' + (k ? '' : ' dimk') + '" data-act="spnew" data-k="' + c[0] + '" style="background:linear-gradient(150deg,' + c[3] + ',' + c[4] + ')">' +
-        (k ? '<span class="cnt">×' + k.n + '</span>' : '') + '<img src="' + ic(c[2]) + '" alt=""><div><div class="kn">' + esc(c[1]) + '</div>' +
-        '<div class="kv">' + eur(k ? k.s : 0) + '</div></div></button>';
+      c = AC[i]; k = st.byCat[c[0]]; var kr = st.byRec[c[0]] || 0;
+      h += '<button class="ktile' + (k || kr ? '' : ' dimk') + '" data-act="spnew" data-k="' + c[0] + '" style="background:linear-gradient(150deg,' + c[3] + ',' + c[4] + ')">' +
+        (k ? '<span class="cnt">×' + k.n + '</span>' : '') + (kr ? '<span class="cnt rr">↻</span>' : '') + '<img src="' + ic(c[2]) + '" alt=""><div><div class="kn">' + esc(c[1]) + '</div>' +
+        '<div class="kv">' + eur((k ? k.s : 0) + kr) + '</div></div></button>';
     }
     h += '</div>';
   }
@@ -1326,6 +1335,7 @@ function renderSp(){
   h += '<div class="lbl">Importo</div><input class="amt" id="s_amt" inputmode="decimal" placeholder="0,00" value="' + esc(String(d.amt).replace('.', ',')) + '">';
   h += '<div class="fld"><label>Descrizione' + (SECT[curSec].noteReq ? '' : ' (facoltativa)') + '</label><input id="s_note" placeholder="' + esc(NOTE_PH[curSec] || 'es. dove, cosa') + '" value="' + esc(d.note) + '"></div>';
   h += entChips(d.veh, 'spveh');
+  if (curSec === 'tel') h += '<div class="fld"><label>Operatore</label>' + chipRow('spop', OPS, d.op || '') + '</div>';
   h += payChips('sppay', d.pay);
   h += '<div style="height:6px"></div><button class="btn" data-act="spsave">Registra</button>';
   $('sheet').innerHTML = h;
@@ -1343,6 +1353,7 @@ function saveSp(){
   if (!(p > 0)) { toast('Inserisci l\'importo'); return; }
   if (SECT[curSec].noteReq && !d.note) { toast('Scrivi cosa hai comprato'); return; }
   var nsp = { id: Date.now() + '_' + Math.floor(Math.random() * 1e5), t: Date.now(), sec: curSec, cat: d.cat, price: Math.round(p * 100) / 100, note: d.note, pay: d.pay, veh: SECT[curSec].ent ? d.veh : '' };
+  if (curSec === 'tel' && d.op) nsp.op = d.op;
   S.sp.push(nsp);
   S.lastPay = d.pay;
   save(); closeSheet(); render(); toast(catOf(curSec, 'log', d.cat)[1] + ', ' + eur(p));
@@ -1571,16 +1582,18 @@ function monthMoney(){
   /* conto: saldo di partenza + entrate − uscite dal giorno del saldo */
   r.hasBank = S.bank && S.bank.date;
   if (r.hasBank) {
-    var from = S.bank.date, bal = S.bank.base;
-    for (i = 0; i < S.inc.log.length; i++) { if (S.inc.log[i].t >= from) bal += S.inc.log[i].amt; }
-    var mEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59).getTime();
-    for (i = 0; i < S.inc.rec.length; i++) bal += incMonth(S.inc.rec[i]) * occurrences(S.inc.rec[i].day, from, mEnd);
-    for (i = 0; i < S.log.length; i++) { if (S.log[i].t >= from && payType(S.log[i].pay) !== 'cash') bal -= S.log[i].price; }
-    for (i = 0; i < S.sp.length; i++) { if (S.sp[i].t >= from && payType(S.sp[i].pay) !== 'cash') bal -= S.sp[i].price; }
-    for (i = 0; i < S.pre.length; i++) { if (S.pre[i].t >= from) bal -= S.pre[i].amt; }
-    for (i = 0; i < A.length; i++) { if (payType(A[i].pay) !== 'cash') bal -= A[i].m * occurrences(A[i].day, from, mEnd); }
-    r.bal = bal;
-    r.balEnd = bal;
+    /* dal mese in cui hai inserito il saldo: tutte le entrate e tutte le uscite (ricorrenti intere, mese per mese) */
+    var from = S.bank.date, fd = new Date(from), mStart = new Date(fd.getFullYear(), fd.getMonth(), 1).getTime(),
+        mEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59).getTime(), bin = 0, bout = 0, bcash = 0, bpre = 0;
+    for (i = 0; i < S.inc.log.length; i++) { if (S.inc.log[i].t >= from) bin += S.inc.log[i].amt; }
+    for (i = 0; i < S.inc.rec.length; i++) bin += incMonth(S.inc.rec[i]) * occurrences(S.inc.rec[i].day, mStart, mEnd);
+    for (i = 0; i < S.log.length; i++) { if (S.log[i].t >= from) { if (payType(S.log[i].pay) === 'cash') bcash += S.log[i].price; else bout += S.log[i].price; } }
+    for (i = 0; i < S.sp.length; i++) { if (S.sp[i].t >= from) { if (payType(S.sp[i].pay) === 'cash') bcash += S.sp[i].price; else bout += S.sp[i].price; } }
+    for (i = 0; i < A.length; i++) { if (payType(A[i].pay) === 'cash') bcash += A[i].m * occurrences(A[i].day, mStart, mEnd); else bout += A[i].m * occurrences(A[i].day, mStart, mEnd); }
+    for (i = 0; i < S.pre.length; i++) { if (S.pre[i].t >= from) bpre += S.pre[i].amt; }
+    r.balIn = bin; r.balOut = bout; r.balCash = bcash; r.balPre = bpre;
+    r.bal = S.bank.base + bin - bout - bpre;
+    r.balEnd = r.bal;
   }
   /* contanti in tasca: prelievi meno spese pagate in contanti */
   var cf = S.cashFrom || 0; r.cashIn = 0; r.cashOut = 0; r.cashPreM = 0;
@@ -1625,7 +1638,12 @@ function renderHub(){
   var anim = !hubShown && hubTab === 'dash'; if (hubTab === 'dash') hubShown = true;
   if (hubTab === 'dash') {
   h += '<div class="flipdash' + (anim ? ' flipin' : '') + '">';
-  h += clock('Saldo conto', M.hasBank ? M.bal : null, 'orange big', M.hasBank ? 'A fine mese, con entrate e uscite ricorrenti già contate.' : 'Tocca per inserire il saldo di oggi.', M.hasBank ? '' : ' data-act="banknew"', true);
+  var bcap = 'Tocca per inserire il saldo di oggi.';
+  if (M.hasBank) {
+    bcap = 'Fine mese: ' + money(S.bank.base) + ' + entrate ' + money(M.balIn) + ' − uscite ' + money(M.balOut) + (M.balPre > 0 ? ' − prelievi ' + money(M.balPre) : '') + ' = <b>' + money(M.bal) + '</b>';
+    if (M.balCash > 0) bcap += '<br>Le spese in contanti (' + money(M.balCash) + ') escono dal portafoglio, non dal conto.';
+  }
+  h += clock('Saldo conto', M.hasBank ? M.bal : null, 'orange big', bcap, M.hasBank ? '' : ' data-act="banknew"', true);
   var mfs = Math.min(flapFs(M.inc), flapFs(M.spendPlan), flapFs(M.autoAll));
   h += '<div class="cgrid">';
   h += clock('Uscite totali', M.spendPlan, 'orange', 'una tantum ' + money(M.logged) + '<br>ricorrenti ' + money(M.autoAll), '', false, mfs);
@@ -1674,7 +1692,7 @@ function renderHub(){
 /* PAGINA SPESA (tasto −): si sceglie il settore */
 function sectorTiles(still){
   var r2 = range('mese'), mese = aggregate(foodEntries(r2[0], r2[1])).tot, r1 = range('oggi'), oggi = aggregate(foodEntries(r1[0], r1[1])).tot,
-      t = telStats(), c = casaStats(''), h = '', i, k, C, ss, sub, tl = secStats('tel', true).log, cl = secStats('casa', true).log;
+      t = telStats(), c = casaStats(''), h = '', i, k, C, ss, sub, tx = secStats('tel', true), cx = secStats('casa', true), tl = tx.log + tx.rec, cl = cx.log + cx.rec;
   h += hubTile('oggi', '', 'Alimentazione', ICONS['Hot beverage'], ['#c98a3a','#4a2a10'], eur(mese), 'oggi ' + eur(oggi), still);
   h += hubTile('tel', 'tel', 'Telefonia', ICONS['Mobile phone'], ['#4a8fe0','#142a5a'], eur(t.month + tl), t.n + (t.n === 1 ? ' linea' : ' linee') + (tl > 0 ? ', extra ' + eur(tl) : ''), still);
   h += hubTile('casa', 'casa', 'Casa e utenze', ICONS['Houses'], ['#c9a227','#4a3a10'], eur(c.month + cl), S.casa.homes.length + (S.casa.homes.length === 1 ? ' casa' : ' case') + (cl > 0 ? ', extra ' + eur(cl) : ''), still);
@@ -1742,10 +1760,11 @@ function renderInc(){
   h += '<div class="grid">';
   var byc = {};
   for (i = 0; i < S.inc.log.length; i++) { var e = S.inc.log[i]; if (e.t >= m0) { if (!byc[e.cat]) byc[e.cat] = { n:0, s:0 }; byc[e.cat].n++; byc[e.cat].s += e.amt; } }
+  for (i = 0; i < S.inc.rec.length; i++) { var er = S.inc.rec[i]; if (!byc[er.cat]) byc[er.cat] = { n:0, s:0 }; byc[er.cat].s += incMonth(er); byc[er.cat].r = 1; }
   for (i = 0; i < INC.length; i++) {
     c = INC[i]; var k = byc[c[0]];
     h += '<button class="ktile' + (k ? '' : ' dimk') + '" data-act="innew" data-k="' + c[0] + '" style="background:linear-gradient(150deg,' + c[3] + ',' + c[4] + ')">' +
-      (k ? '<span class="cnt">×' + k.n + '</span>' : '') + '<img src="' + ic(c[2]) + '" alt=""><div><div class="kn">' + c[1] + '</div><div class="kv">' + eur(k ? k.s : 0) + '</div></div></button>';
+      (k && k.n ? '<span class="cnt">×' + k.n + '</span>' : '') + (k && k.r ? '<span class="cnt rr">↻</span>' : '') + '<img src="' + ic(c[2]) + '" alt=""><div><div class="kn">' + c[1] + '</div><div class="kv">' + eur(k ? k.s : 0) + '</div></div></button>';
   }
   h += '</div>';
 
@@ -1776,7 +1795,7 @@ function renderConto(){
   h += '<h2>' + esc((S.bank && S.bank.name) || 'Conto corrente') + '</h2>';
   if (M.hasBank) {
     h += mrow(ic('Bank'), 'Saldo a fine mese', 'partenza ' + eur(S.bank.base) + ' il ' + shortDate(S.bank.date), M.bal, 'ibal');
-    h += '<div class="hint">Il saldo parte dal valore che hai inserito, aggiunge tutte le entrate programmate del mese e toglie tutte le uscite programmate, anche quelle che non sono ancora arrivate. Le spese tue e le entrate extra si aggiungono quando le registri. Quando controlli la banca, aggiorna il saldo: il conto riparte da lì.</div>';
+    h += '<div class="hint">Saldo di fine mese = saldo inserito + tutte le entrate (una tantum e ricorrenti) − tutte le uscite pagate dal conto (una tantum e ricorrenti) − prelievi. Le ricorrenti contano per intero nel mese, anche se non sono ancora arrivate. Le spese in contanti scalano i contanti in tasca, non il conto.</div>';
     h += '<button class="ghost" data-act="banknew">Aggiorna il saldo reale</button>';
   } else {
     h += '<div class="empty">Inserisci il saldo di oggi: da lì l\'app calcola come cambia con entrate e spese.</div><button class="ghost" data-act="banknew">+ Imposta il saldo</button>';
@@ -1877,10 +1896,10 @@ function saveCash(){
 function openBank(){
   var b = S.bank || {};
   sh = { kind:'bank', d:{ name: b.name || 'Conto corrente', amt:'' } };
-  var h = '<div class="shead" style="background:linear-gradient(150deg,#3c6fd1,#142a5a)"><img src="' + ic('Bank') + '" alt=""><div><div class="st1">Saldo del conto</div><div class="st2">Quello che vedi oggi sull\'app della banca</div></div></div>';
+  var h = '<div class="shead" style="background:linear-gradient(150deg,#3c6fd1,#142a5a)"><img src="' + ic('Bank') + '" alt=""><div><div class="st1">Saldo del conto</div><div class="st2">Il punto di partenza del mese</div></div></div>';
   h += '<div class="fld"><label>Nome del conto</label><input id="k_name" value="' + esc(sh.d.name) + '"></div>';
-  h += '<div class="lbl">Saldo di oggi</div><input class="amt" id="k_amt" inputmode="decimal" placeholder="0,00">';
-  h += '<div class="hint">Puoi scrivere un saldo negativo con il meno davanti. Da questo momento l\'app aggiunge le entrate e toglie le spese.</div>';
+  h += '<div class="lbl">Saldo di inizio mese</div><input class="amt" id="k_amt" inputmode="decimal" placeholder="0,00">';
+  h += '<div class="hint">Scrivi il saldo di inizio mese, prima di stipendio e addebiti del mese. Da qui l\'app aggiunge tutte le entrate del mese e toglie tutte le uscite. Saldo negativo: metti il meno davanti.</div>';
   h += '<div style="height:12px"></div><button class="btn" data-act="banksave">Salva saldo</button>';
   $('sheet').innerHTML = h; $('ov').className = 'ov show';
 }
@@ -1948,7 +1967,7 @@ function movRows(a, b){
   for (i = 0; i < S.log.length; i++) { e = S.log[i]; if (e.t < a || e.t >= b) continue; it = getItem(e.item) || { name:'(voce rimossa)', icons:[] };
     L.push({ t:e.t, src:'log', id:e.id, v:-e.price, pay:e.pay || '', name:it.name, img:ic((it.icons && it.icons[0]) || 'Receipt'), sub:'Alimentazione' + (e.v ? ', ' + e.v : '') + (e.note ? ', ' + e.note : '') }); }
   for (i = 0; i < S.sp.length; i++) { e = S.sp[i]; if (e.t < a || e.t >= b || !SECT[e.sec]) continue; c = catOf(e.sec, 'log', e.cat); x = ent(e.veh);
-    L.push({ t:e.t, src:'sp', id:e.id, v:-e.price, pay:e.pay || '', name:c[1], img:ic(c[2]), sub:SECT[e.sec].name + (e.note ? ', ' + e.note : '') + (x ? ', ' + x.name : '') }); }
+    L.push({ t:e.t, src:'sp', id:e.id, v:-e.price, pay:e.pay || '', name:c[1] + (e.op ? ' ' + opInfo(e.op)[1] : ''), img:ic(c[2]), sub:SECT[e.sec].name + (e.note ? ', ' + e.note : '') + (x ? ', ' + x.name : '') }); }
   for (i = 0; i < S.inc.log.length; i++) { e = S.inc.log[i]; if (e.t < a || e.t >= b) continue; c = incCat(e.cat);
     L.push({ t:e.t, src:'inc', id:e.id, v:e.amt, pay:'', name:c[1], img:ic(c[2]), sub:'Entrata extra' + (e.note ? ', ' + e.note : '') }); }
   for (i = 0; i < S.pre.length; i++) { e = S.pre[i]; if (e.t < a || e.t >= b) continue;
@@ -2395,7 +2414,11 @@ document.addEventListener('click', function(ev){
   else if (a === 'mode' && sh && (sh.kind === 'in' || sh.kind === 'ir')) {}
   else if (a === 'mode') {
     var mv = el.getAttribute('data-v');
-    if (mv === 'ric' && sh.kind === 'sp') {
+    if (mv === 'ric' && sh.kind === 'sp' && curSec === 'tel') {
+      var od = sh.d; openLine(-1); if (od.op) sh.d.op = od.op; if (od.amt) sh.d.fee = od.amt; if (od.pay) sh.d.pay = od.pay; renderLine();
+    } else if (mv === 'una' && sh.kind === 'line') {
+      var ld = sh.d; curSec = 'tel'; sh = { kind:'sp', d:{ cat:'ricarica', amt: ld.fee || '', note:'', pay: ld.pay || defPay(), veh:'', op: ld.op } }; renderSp();
+    } else if (mv === 'ric' && sh.kind === 'sp') {
       sh = { kind:'rec', id:'', d:{ sec:curSec, cat:sh.d.cat, name:'', amt:sh.d.amt, freq:1, day:'', next:'', pay:sh.d.pay, veh:sh.d.veh, note:'' } }; renderRec();
     } else if (mv === 'ric' && !sh.kind) {
       var fit = getItem(sh.id); curSec = 'cibo';
@@ -2472,6 +2495,7 @@ document.addEventListener('click', function(ev){
     buildSect(); save(); closeSheet(); view = 'home'; render(); toast('Settore eliminato');
   }
   else if (a === 'spnew') openSp(el.getAttribute('data-k'));
+  else if (a === 'spop') { sh.d.op = sh.d.op === el.getAttribute('data-v') ? '' : el.getAttribute('data-v'); renderSp(); }
   else if (a === 'spnew2') { curSec = el.getAttribute('data-s'); entSel = ''; openSp(el.getAttribute('data-k')); }
   else if (a === 'spveh') { sh.d.veh = el.getAttribute('data-v'); renderSp(); }
   else if (a === 'spwho') { sh.d.who = +el.getAttribute('data-i'); renderSp(); }
