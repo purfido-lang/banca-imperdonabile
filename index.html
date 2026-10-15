@@ -258,10 +258,6 @@ td:first-child,th:first-child{text-align:left}
 .pickg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .pickg button{display:flex;align-items:center;gap:8px;padding:12px 10px;border-radius:14px;border:none;background:var(--soft);color:var(--cream);font:inherit;font-size:14px;font-weight:600;text-align:left}
 .pickg img{width:28px;height:28px;flex:0 0 auto}
-.rcb{margin-top:12px}
-.rcbox{display:flex;align-items:center;gap:10px;margin-top:12px;padding:8px;border-radius:14px;background:var(--soft)}
-.rcbox img{width:56px;height:72px;object-fit:cover;border-radius:8px;background:#ddd}
-.rcbox span{flex:1;font-size:14px;font-weight:600}
 .pr.pre{color:var(--muted)}
 /* pagine interne a palette */
 .hero{color:#fff!important;border-radius:26px!important;padding:16px 14px 14px!important;margin:0 0 20px!important;
@@ -454,14 +450,33 @@ input.amt:focus,input.pin:focus,.fld input:focus,.set input:focus{outline:2px so
   .wide{grid-column:span 2}
   .pic.sm{width:80px;height:80px}
 }
+.tabs button.pm{flex:0 0 54px;margin:0 3px;font-size:30px;line-height:1;font-weight:400;color:#fff;padding:7px 0 9px;border-radius:16px}
+.tabs button.pm.out{background:linear-gradient(180deg,#f6825a,#e3552b)}
+.tabs button.pm.in{background:linear-gradient(180deg,#6cc699,#348a5c)}
+.tabs button.pm.act{box-shadow:0 0 0 2px #fff inset;color:#fff}
+.still:active{transform:none!important}
+div.clock,div.hubt{cursor:default}
+.cone{margin-top:12px}
+.cone .clock{padding:10px 10px 10px;border-radius:20px}
+.cone .win{padding:12px 4px 22px;gap:3px}
+.cone .lab{font-size:10px;left:8px;bottom:5px}
+.cone .cap{font-size:12px;padding-top:7px}
+.ptitle{display:flex;align-items:center;gap:12px;margin:4px 0 14px}
+.ptitle span{flex:0 0 auto;width:46px;height:46px;border-radius:15px;color:#fff;font-size:30px;line-height:44px;text-align:center}
+.ptitle.out span{background:linear-gradient(180deg,#f6825a,#e3552b)}
+.ptitle.in span{background:linear-gradient(180deg,#6cc699,#348a5c)}
+.ptitle b{display:block;font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:#16171a}
+.ptitle i{display:block;font-style:normal;font-size:13px;color:#6b707a}
+.cardline .chev{color:#9aa0aa}
 </style>
 </head>
 <body>
 <div id="main"></div>
 <div class="tabs">
   <button data-act="tab" data-v="home" id="t_home">Cruscotto</button>
-  <button data-act="tab" data-v="oggi" id="t_oggi">Cibo</button>
   <button data-act="tab" data-v="mov" id="t_mov">Movimenti</button>
+  <button class="pm out" data-act="tab" data-v="spesa" id="t_out" aria-label="Nuova spesa">−</button>
+  <button class="pm in" data-act="tab" data-v="inc" id="t_in" aria-label="Nuova entrata">+</button>
   <button data-act="tab" data-v="ric" id="t_ric">Ricorrenti</button>
 </div>
 <div class="ov" id="ov"><div class="sheet" id="sheet"></div></div>
@@ -764,13 +779,23 @@ function casaStats(homeId){
   }
   return r;
 }
+function onceGrid(sec){
+  var C = SECT[sec], st = secStats(sec, true), h = '<h2>Spesa una tantum <small>' + eur(st.log) + ' nel mese</small></h2><div class="grid">', i, c, k;
+  for (i = 0; i < C.log.length; i++) {
+    c = C.log[i]; k = st.byCat[c[0]];
+    h += '<button class="ktile' + (k ? '' : ' dimk') + '" data-act="spnew2" data-s="' + sec + '" data-k="' + c[0] + '" style="background:linear-gradient(150deg,' + c[3] + ',' + c[4] + ')">' +
+      (k ? '<span class="cnt">×' + k.n + '</span>' : '') + '<img src="' + ic(c[2]) + '" alt=""><div><div class="kn">' + esc(c[1]) + '</div><div class="kv">' + eur(k ? k.s : 0) + '</div></div></button>';
+  }
+  return h + '</div>';
+}
 function renderCasa(){
   var H = S.casa.homes, all = casaStats(''), h = backBar(), i, k, hm, st;
   if (!casaSel || !getHome(casaSel)) casaSel = H.length ? H[0].id : '';
-  h += '<div class="hero"><div class="date">Casa e utenze · costo mensile</div>' + meter(all.month, 'casa');
+  h += '<div class="hero"><div class="date">Casa e utenze, questo mese</div>' + meter(all.month + secStats('casa', true).log, 'casa');
   h += '<div class="hint" style="margin-top:0">' + eur(all.month * 12) + ' l\'anno · ' + H.length + (H.length === 1 ? ' casa' : ' case') + ' · ' + all.n + ' voci</div></div>';
 
-  h += '<h2>Le tue case <small>scorri →</small></h2><div class="car">';
+  h += onceGrid('casa');
+  h += '<h2>Le tue case <small>bollette e affitto ricorrenti</small></h2><div class="car">';
   for (i = 0; i < H.length; i++) {
     hm = H[i]; st = casaStats(hm.id);
     h += '<button class="hc' + (hm.id === casaSel ? ' sel' : '') + '" data-act="hsel" data-id="' + hm.id + '"><img src="' + homeIcon(hm) + '" alt="">' +
@@ -931,11 +956,12 @@ function telStats(){
 }
 function renderTel(){
   var t = telStats(), L = S.tel.lines, h = backBar(), i, k, l, ri, o;
-  h += '<div class="hero"><div class="date">Telefonia · costo fisso mensile</div>' + meter(t.month, 'tel');
+  h += '<div class="hero"><div class="date">Telefonia, questo mese</div>' + meter(t.month + secStats('tel', true).log, 'tel');
   h += '<div class="hint" style="margin-top:0">' + eur(t.month * 12) + ' l\'anno · canoni ' + eur(t.fees) + ' + rate ' + eur(t.rate) +
     (t.resid ? ' · debito rate residuo ' + eur(t.resid) : '') + '</div></div>';
 
-  h += '<h2>Operatori <small>scorri →</small></h2><div class="car">';
+  h += onceGrid('tel');
+  h += '<h2>Linee e operatori <small>ricorrenti</small></h2><div class="car">';
   for (i = 0; i < OPS.length; i++) {
     o = OPS[i]; var b = t.byOp[o[0]];
     if (!b) continue;
@@ -1121,6 +1147,14 @@ function buildSect(){
     SECT[k] = { name:c.name, sub:c.sub || '', icon:c.icon, col:c.col, rec:clone(c.rec || []), log:clone(c.log || []), custom:true };
     SECT_ORDER.push(k);
   }
+  /* telefonia e casa: le voci una tantum (le ricorrenti restano linee e bollette) */
+  SECT.tel = { name:'Telefonia', sub:'', icon:'Mobile phone', col:['#4a8fe0','#142a5a'], rec:[], internal:true,
+    log:[['ricarica','Ricarica','Antenna bars','#4a8fe0','#142a5a'],['smart','Smartphone e accessori','Mobile phone','#3c6fd1','#142a5a'],
+         ['ripara','Riparazione','Wrench','#5a5f6b','#1c1e22'],['tel_altro','Altro','Receipt','#8a7058','#3d3027']] };
+  SECT.casa = { name:'Casa e utenze', sub:'', icon:'Houses', col:['#c9a227','#4a3a10'], rec:[], internal:true,
+    log:[['manut','Manutenzione','Hammer and wrench','#c9a227','#4a3a10'],['arredo','Arredo','Potted plant','#4f9e57','#173a1c'],
+         ['elettro','Elettrodomestici','Light bulb','#e8a33a','#5a3a0c'],['pulizie','Pulizie','Soap','#2fa3a0','#0c3d3c'],
+         ['congu','Conguaglio bolletta','High voltage','#d9534f','#4a1515'],['casa_altro','Altro','Receipt','#8a7058','#3d3027']] };
   /* alimentazione come settore interno, per le spese ricorrenti di cibo */
   SECT.cibo = { name:'Alimentazione', sub:'', icon:'Hot beverage', col:['#c98a3a','#4a2a10'], rec:[], log:[], food:true };
   for (i = 0; i < S.items.length; i++) SECT.cibo.log.push([S.items[i].id, S.items[i].name, (S.items[i].icons && S.items[i].icons[0]) || 'Receipt', '#c98a3a', '#4a2a10']);
@@ -1216,10 +1250,11 @@ function renderSec(){
     h += '<div class="insight">Spese sanitarie ' + d.getFullYear() + ': <b>' + eur(st.year) + '</b>. Detrazione IRPEF stimata (19% oltre la franchigia di 129,11 €): <b>' + eur(det) + '</b>. Stima indicativa: conserva scontrini parlanti e paga con metodi tracciabili.</div>';
   }
 
-  if (C.log.length) {
-    h += '<h2>Registra una spesa</h2><div class="grid">';
-    for (i = 0; i < C.log.length; i++) {
-      c = C.log[i]; k = st.byCat[c[0]];
+  var AC = allCats(sec);
+  if (AC.length) {
+    h += '<h2>Scegli la voce <small>poi una tantum o ricorrente</small></h2><div class="grid">';
+    for (i = 0; i < AC.length; i++) {
+      c = AC[i]; k = st.byCat[c[0]];
       h += '<button class="ktile' + (k ? '' : ' dimk') + '" data-act="spnew" data-k="' + c[0] + '" style="background:linear-gradient(150deg,' + c[3] + ',' + c[4] + ')">' +
         (k ? '<span class="cnt">×' + k.n + '</span>' : '') + '<img src="' + ic(c[2]) + '" alt=""><div><div class="kn">' + esc(c[1]) + '</div>' +
         '<div class="kv">' + eur(k ? k.s : 0) + '</div></div></button>';
@@ -1291,7 +1326,6 @@ function renderSp(){
   h += '<div class="lbl">Importo</div><input class="amt" id="s_amt" inputmode="decimal" placeholder="0,00" value="' + esc(String(d.amt).replace('.', ',')) + '">';
   h += '<div class="fld"><label>Descrizione' + (SECT[curSec].noteReq ? '' : ' (facoltativa)') + '</label><input id="s_note" placeholder="' + esc(NOTE_PH[curSec] || 'es. dove, cosa') + '" value="' + esc(d.note) + '"></div>';
   h += entChips(d.veh, 'spveh');
-  h += rcBox(d.photo) + rcBtn();
   h += payChips('sppay', d.pay);
   h += '<div style="height:6px"></div><button class="btn" data-act="spsave">Registra</button>';
   $('sheet').innerHTML = h;
@@ -1309,7 +1343,6 @@ function saveSp(){
   if (!(p > 0)) { toast('Inserisci l\'importo'); return; }
   if (SECT[curSec].noteReq && !d.note) { toast('Scrivi cosa hai comprato'); return; }
   var nsp = { id: Date.now() + '_' + Math.floor(Math.random() * 1e5), t: Date.now(), sec: curSec, cat: d.cat, price: Math.round(p * 100) / 100, note: d.note, pay: d.pay, veh: SECT[curSec].ent ? d.veh : '' };
-  if (d.photo) { rcPut(nsp.id, d.photo); nsp.rc = 1; }
   S.sp.push(nsp);
   S.lastPay = d.pay;
   save(); closeSheet(); render(); toast(catOf(curSec, 'log', d.cat)[1] + ', ' + eur(p));
@@ -1326,7 +1359,7 @@ function recPreview(){ var n = num(sh.d.amt), f = sh.d.freq || 1; return n > 0 ?
 function renderRec(){
   var d = sh.d, C = SECT[d.sec], c = catOf(d.sec, 'rec', d.cat), h = '', i, B = (d.sec === 'abb' && BRANDS[d.cat]) || [], AC = allCats(d.sec);
   h += '<div class="shead" style="background:linear-gradient(150deg,' + c[3] + ',' + c[4] + ')"><img src="' + ic(c[2]) + '" alt=""><div><div class="st1">' + (sh.id ? 'Modifica ricorrente' : 'Spesa ricorrente') + '</div><div class="st2">' + esc(C.name) + '</div></div></div>';
-  if (!sh.id && (C.log.length || C.food)) h += modeSeg('ric');
+  if (!sh.id) h += modeSeg('ric');
   h += '<div class="fld"><label>Categoria</label><div class="chips l">';
   for (i = 0; i < AC.length; i++) h += '<button class="chip kchip' + (d.cat === AC[i][0] ? ' act' : '') + '" data-act="rcat" data-v="' + AC[i][0] + '"><img src="' + ic(AC[i][2]) + '" alt="">' + esc(AC[i][1]) + '</button>';
   h += '</div></div>';
@@ -1475,9 +1508,10 @@ function animMeters(){
 }
 
 /* ---------- PAGINA SETTORI ---------- */
-function hubTile(view, sec, name, img, col, v, sub){
-  return '<button class="hubt" data-act="tab" data-v="' + view + '"' + (sec ? ' data-s="' + sec + '"' : '') + ' style="background:linear-gradient(150deg,' + col[0] + ',' + col[1] + ')">' +
-    '<img src="' + img + '" alt=""><div class="hn2">' + esc(name) + '</div><div class="hv2">' + v + '</div><div class="hs2">' + esc(sub) + '</div></button>';
+function hubTile(view, sec, name, img, col, v, sub, still){
+  var tg = still ? 'div' : 'button';
+  return '<' + tg + ' class="hubt' + (still ? ' still' : '') + '"' + (still ? '' : ' data-act="tab" data-v="' + view + '"' + (sec ? ' data-s="' + sec + '"' : '')) + ' style="background:linear-gradient(150deg,' + col[0] + ',' + col[1] + ')">' +
+    '<img src="' + img + '" alt=""><div class="hn2">' + esc(name) + '</div><div class="hv2">' + v + '</div><div class="hs2">' + esc(sub) + '</div></' + tg + '>';
 }
 
 /* ================= ENTRATE, CONTO E RIEPILOGO ================= */
@@ -1591,17 +1625,15 @@ function renderHub(){
   var anim = !hubShown && hubTab === 'dash'; if (hubTab === 'dash') hubShown = true;
   if (hubTab === 'dash') {
   h += '<div class="flipdash' + (anim ? ' flipin' : '') + '">';
-  h += clock('Saldo conto', M.hasBank ? M.bal : null, 'orange big', M.hasBank ? 'A fine mese, con tutte le entrate e le uscite programmate già contate.' : 'Tocca per inserire il saldo di oggi.', M.hasBank ? ' data-act="tab" data-v="inc"' : ' data-act="banknew"', true);
-  var mfs = Math.min(flapFs(M.inc), flapFs(M.spendPlan), flapFs(M.logged), flapFs(M.autoAll));
+  h += clock('Saldo conto', M.hasBank ? M.bal : null, 'orange big', M.hasBank ? 'A fine mese, con entrate e uscite ricorrenti già contate.' : 'Tocca per inserire il saldo di oggi.', M.hasBank ? '' : ' data-act="banknew"', true);
+  var mfs = Math.min(flapFs(M.inc), flapFs(M.spendPlan), flapFs(M.autoAll));
   h += '<div class="cgrid">';
-  h += clock('Entrate', M.inc, 'green', 'programmate ' + money(M.incFixAll) + '<br>extra ' + money(M.incLog), ' data-act="tab" data-v="inc"', false, mfs);
-  h += clock('Uscite totali', M.spendPlan, 'orange', 'tue più programmate', ' data-act="tab" data-v="ric"', false, mfs);
-  h += clock('Spese tue', M.logged, 'cream', 'generate da te, giorno per giorno', ' data-act="tab" data-v="oggi"', false, mfs);
-  h += clock('Programmate', M.autoAll, 'black', 'RID ' + money(rid.all) + '<br>carta ' + money(card.all), ' data-act="tab" data-v="ric"', false, mfs);
+  h += clock('Uscite totali', M.spendPlan, 'orange', 'una tantum ' + money(M.logged) + '<br>ricorrenti ' + money(M.autoAll), '', false, mfs);
+  h += clock('Entrate totali', M.inc, 'green', 'una tantum ' + money(M.incLog) + '<br>ricorrenti ' + money(M.incFixAll), '', false, mfs);
+  h += '</div><div class="cone">';
+  h += clock('Di cui spese ricorrenti', M.autoAll, 'black', 'RID ' + money(rid.all) + ', su carta ' + money(card.all), '', false, mfs);
   h += '</div>';
-  h += '<div class="fnote2"><i class="' + (net >= 0 ? 'ok' : 'ko') + '"></i><span>' +
-    (net >= 0 ? 'Con tutto il mese contato sei in attivo di <b>' + money(net) + ' €</b>.' : 'Con tutto il mese contato escono <b>' + money(-net) + ' €</b> più di quanto entra.') + '</span></div>';
-  h += '<button class="cardline" data-act="htab" data-v="carte"><img src="' + ic('Credit card') + '" alt=""><span>Carte di credito questo mese</span><b class="lv">' + money(creditMonth()) + '</b><span class="chev">›</span></button>';
+  h += '<button class="cardline" data-act="tab" data-v="conto"><img src="' + ic('Bank') + '" alt=""><span>Saldo reale, contanti e prelievi</span><span class="chev">›</span></button>';
   h += '</div>';
   return h;
   }
@@ -1626,7 +1658,7 @@ function renderHub(){
     h += '</div>';
     for (ai = 0; ai < GO.length; ai++) {
       gk = GO[ai]; gx = grpInfo(gk);
-      h += '<button class="lrow"' + gx.act + '><img src="' + gx.img + '" alt=""><span class="lt"><b>' + esc(gx.name) + ' <em class="pct" style="background:' + gx.col + '">' + Math.round(G[gk].s / M.autoAll * 100) + '%</em></b><i>' + esc(G[gk].names.join(', ')) + '</i></span><span class="ld"></span><span class="lv">' + money(G[gk].s) + '</span></button>';
+      h += '<div class="lrow"><img src="' + gx.img + '" alt=""><span class="lt"><b>' + esc(gx.name) + ' <em class="pct" style="background:' + gx.col + '">' + Math.round(G[gk].s / M.autoAll * 100) + '%</em></b><i>' + esc(G[gk].names.join(', ')) + '</i></span><span class="ld"></span><span class="lv">' + money(G[gk].s) + '</span></div>';
     }
   } else {
     h += '<div class="lsub">Inserisci affitto, bollette, telefono e abbonamenti nei loro settori: qui vedi come si dividono.</div>';
@@ -1635,16 +1667,28 @@ function renderHub(){
   return h;
   }
 
-  /* foglio Settori: riquadri per aprire ogni settore */
-  h += '<div class="hub">';
-  h += hubTile('oggi', '', 'Alimentazione', ICONS['Hot beverage'], ['#c98a3a','#4a2a10'], eur(mese), 'oggi ' + eur(oggi));
-  h += hubTile('inc', '', 'Entrate e conto', ic('Money bag'), ['#3f9e6a','#123a24'], eur(M.inc), 'entrate del mese');
-  h += hubTile('tel', '', 'Telefonia', ICONS['Mobile phone'], ['#4a8fe0','#142a5a'], eur(t.month), t.n + (t.n === 1 ? ' linea' : ' linee'));
-  h += hubTile('casa', '', 'Casa e utenze', ICONS['Houses'], ['#c9a227','#4a3a10'], eur(c.month), S.casa.homes.length + (S.casa.homes.length === 1 ? ' casa' : ' case'));
-  for (i = 0; i < SECT_ORDER.length; i++) { k = SECT_ORDER[i]; C = SECT[k]; h += hubTile('sec', k, C.name, ic(C.icon), C.col, eur(vals[k]), subs[k]); }
-  h += '<button class="hubt newsec" data-act="secnew"><span class="plus">+</span><div class="hn2">Nuovo settore</div><div class="hs2">Viaggi, regali, casa al mare…</div></button>';
-  h += '</div>';
+  /* foglio Settori: solo contatori */
+  h += '<div class="hub">' + sectorTiles(true) + '</div>';
   return h;
+}
+/* PAGINA SPESA (tasto −): si sceglie il settore */
+function sectorTiles(still){
+  var r2 = range('mese'), mese = aggregate(foodEntries(r2[0], r2[1])).tot, r1 = range('oggi'), oggi = aggregate(foodEntries(r1[0], r1[1])).tot,
+      t = telStats(), c = casaStats(''), h = '', i, k, C, ss, sub, tl = secStats('tel', true).log, cl = secStats('casa', true).log;
+  h += hubTile('oggi', '', 'Alimentazione', ICONS['Hot beverage'], ['#c98a3a','#4a2a10'], eur(mese), 'oggi ' + eur(oggi), still);
+  h += hubTile('tel', 'tel', 'Telefonia', ICONS['Mobile phone'], ['#4a8fe0','#142a5a'], eur(t.month + tl), t.n + (t.n === 1 ? ' linea' : ' linee') + (tl > 0 ? ', extra ' + eur(tl) : ''), still);
+  h += hubTile('casa', 'casa', 'Casa e utenze', ICONS['Houses'], ['#c9a227','#4a3a10'], eur(c.month + cl), S.casa.homes.length + (S.casa.homes.length === 1 ? ' casa' : ' case') + (cl > 0 ? ', extra ' + eur(cl) : ''), still);
+  for (i = 0; i < SECT_ORDER.length; i++) {
+    k = SECT_ORDER[i]; C = SECT[k]; ss = secStats(k, true);
+    sub = ss.nrec || ss.nlog ? 'ricorrenti ' + eur(ss.rec) + ', una tantum ' + eur(ss.log) : 'nessuna spesa nel mese';
+    h += hubTile('sec', k, C.name, ic(C.icon), C.col, eur(ss.rec + ss.log), sub, still);
+  }
+  return h;
+}
+function renderSpesa(){
+  var h = '<div class="ptitle out"><span>−</span><div><b>Nuova spesa</b><i>Scegli il settore, poi la voce</i></div></div><div class="hub">' + sectorTiles(false);
+  h += '<button class="hubt newsec" data-act="secnew"><span class="plus">+</span><div class="hn2">Nuovo settore</div><div class="hs2">Viaggi, regali, casa al mare…</div></button>';
+  return h + '</div>';
 }
 /* importo con separatore delle migliaia: 2.848,70 */
 function money(n){
@@ -1669,9 +1713,10 @@ function flaps(v, big, fsx){
   return h;
 }
 function clock(label, v, cls, cap, act, brand, fsx){
-  return '<button class="clock ' + cls + '"' + act + '>' + (brand ? '<span class="brandm">Banca Imperdonabile</span>' : '') +
+  var tg = act ? 'button' : 'div';
+  return '<' + tg + ' class="clock ' + cls + (act ? '' : ' still') + '"' + act + '>' + (brand ? '<span class="brandm">Banca Imperdonabile</span>' : '') +
     '<span class="win">' + flaps(v, cls.indexOf('big') >= 0, fsx) + '<span class="lab">' + esc(label) + '</span></span>' +
-    '<span class="cap">' + cap + '</span></button>';
+    (cap ? '<span class="cap">' + cap + '</span>' : '') + '</' + tg + '>';
 }
 function fbox(label, v, note, act, cls, extra){
   return '<button class="fbox' + (cls ? ' ' + cls : '') + '"' + act + '><span class="fl">' + esc(label) + '</span>' +
@@ -1686,31 +1731,15 @@ function grpInfo(k){
   return { name:'Altro', img:ic('Receipt'), col:'#8a7058', act:'' };
 }
 function lrow(img, name, sub, v, act){
-  return '<button class="lrow"' + act + '><img src="' + img + '" alt=""><span class="lt"><b>' + esc(name) + '</b><i>' + esc(sub) + '</i></span><span class="ld"></span><span class="lv">' + money(v) + '</span></button>';
+  return '<div class="lrow"><img src="' + img + '" alt=""><span class="lt"><b>' + esc(name) + '</b><i>' + esc(sub) + '</i></span><span class="ld"></span><span class="lv">' + money(v) + '</span></div>';
 }
 function shortDate(ts){ var x = new Date(ts); return x.getDate() + ' ' + MM[x.getMonth()].substr(0, 3) + ' ' + x.getFullYear(); }
 
 /* ---------- PAGINA ENTRATE E CONTO ---------- */
 function renderInc(){
-  var M = monthMoney(), d = new Date(), h = backBar(), i, c, m0 = range('mese')[0];
-  h += '<div class="hero green"><div class="date">Entrate di ' + MM[d.getMonth()] + '</div>' + meter(M.inc, 'inc', false, 'green');
-  h += '<div class="hint">Programmate del mese ' + eur(M.incFixAll) + ' (già arrivate ' + eur(M.incFixDone) + '), extra registrate ' + eur(M.incLog) + '.</div></div>';
+  var M = monthMoney(), d = new Date(), h = '<div class="ptitle in"><span>+</span><div><b>Nuova entrata</b><i>Scegli la voce, poi una tantum o ricorrente</i></div></div>', i, c, m0 = range('mese')[0];
 
-  h += '<h2>' + esc((S.bank && S.bank.name) || 'Conto corrente') + '</h2>';
-  if (M.hasBank) {
-    h += mrow(ic('Bank'), 'Saldo a fine mese', 'partenza ' + eur(S.bank.base) + ' il ' + shortDate(S.bank.date), M.bal, 'ibal');
-    h += '<div class="hint">Il saldo parte dal valore che hai inserito, aggiunge tutte le entrate programmate del mese e toglie tutte le uscite programmate, anche quelle che non sono ancora arrivate. Le spese tue e le entrate extra si aggiungono quando le registri. Quando controlli la banca, aggiorna il saldo: il conto riparte da lì.</div>';
-    h += '<button class="ghost" data-act="banknew">Aggiorna il saldo reale</button>';
-  } else {
-    h += '<div class="empty">Inserisci il saldo di oggi: da lì l\'app calcola come cambia con entrate e spese.</div><button class="ghost" data-act="banknew">+ Imposta il saldo</button>';
-  }
-
-  h += '<h2>Contanti</h2>';
-  h += mrow(ic('Money with wings'), 'Contanti in tasca', 'stima: prelievi ' + eur(M.cashIn) + ' meno spese in contanti ' + eur(M.cashOut), M.cash, 'icash', ' data-act="cashset"');
-  h += '<button class="ghost" data-act="prenew">+ Prelievo bancomat</button>';
-  h += '<div class="hint">Il prelievo esce dal conto e diventa contanti. Le spese pagate in contanti non toccano il conto: scalano i contanti in tasca. Tocca la riga per correggere quanto hai davvero nel portafoglio.</div>';
-
-  h += '<h2>Registra un\'entrata</h2><div class="grid">';
+  h += '<div class="grid">';
   var byc = {};
   for (i = 0; i < S.inc.log.length; i++) { var e = S.inc.log[i]; if (e.t >= m0) { if (!byc[e.cat]) byc[e.cat] = { n:0, s:0 }; byc[e.cat].n++; byc[e.cat].s += e.amt; } }
   for (i = 0; i < INC.length; i++) {
@@ -1720,14 +1749,14 @@ function renderInc(){
   }
   h += '</div>';
 
-  h += '<h2>Entrate fisse <small>' + eur(M.incFixAll) + ' al mese</small></h2>';
+  h += '<h2>Entrate ricorrenti <small>' + eur(M.incFixAll) + ' al mese</small></h2>';
   if (!S.inc.rec.length) h += '<div class="empty">Stipendio, affitti incassati, rendite fisse: inseriscili una volta e arrivano da soli nel loro giorno.</div>';
   for (i = 0; i < S.inc.rec.length; i++) {
     var r = S.inc.rec[i]; c = incCat(r.cat);
     h += '<button class="line" data-act="iredit" data-id="' + r.id + '"><div class="top"><img src="' + ic(c[2]) + '" alt="" style="width:28px;height:28px"><span class="lb">' + esc(r.name || c[1]) + '</span><span class="lv pos">+' + eur(incMonth(r)) + '</span></div>' +
       '<div class="meta">' + c[1] + ', ' + eur(r.amt) + ' ' + freqName(r.freq).toLowerCase() + (r.day ? ', il ' + r.day : '') + '</div></button>';
   }
-  h += '<button class="ghost" data-act="irnew">+ Aggiungi entrata fissa</button>';
+  h += '<button class="ghost" data-act="irnew">+ Aggiungi entrata ricorrente</button>';
 
   var list = [];
   for (i = 0; i < S.inc.log.length; i++) { if (S.inc.log[i].t >= m0) list.push(S.inc.log[i]); }
@@ -1742,6 +1771,24 @@ function renderInc(){
   return h;
 }
 
+function renderConto(){
+  var M = monthMoney(), h = backBar();
+  h += '<h2>' + esc((S.bank && S.bank.name) || 'Conto corrente') + '</h2>';
+  if (M.hasBank) {
+    h += mrow(ic('Bank'), 'Saldo a fine mese', 'partenza ' + eur(S.bank.base) + ' il ' + shortDate(S.bank.date), M.bal, 'ibal');
+    h += '<div class="hint">Il saldo parte dal valore che hai inserito, aggiunge tutte le entrate programmate del mese e toglie tutte le uscite programmate, anche quelle che non sono ancora arrivate. Le spese tue e le entrate extra si aggiungono quando le registri. Quando controlli la banca, aggiorna il saldo: il conto riparte da lì.</div>';
+    h += '<button class="ghost" data-act="banknew">Aggiorna il saldo reale</button>';
+  } else {
+    h += '<div class="empty">Inserisci il saldo di oggi: da lì l\'app calcola come cambia con entrate e spese.</div><button class="ghost" data-act="banknew">+ Imposta il saldo</button>';
+  }
+
+  h += '<h2>Contanti</h2>';
+  h += mrow(ic('Money with wings'), 'Contanti in tasca', 'stima: prelievi ' + eur(M.cashIn) + ' meno spese in contanti ' + eur(M.cashOut), M.cash, 'icash', ' data-act="cashset"');
+  h += '<button class="ghost" data-act="prenew">+ Prelievo bancomat</button>';
+  h += '<div class="hint">Il prelievo esce dal conto e diventa contanti. Le spese pagate in contanti non toccano il conto: scalano i contanti in tasca. Tocca la riga per correggere quanto hai davvero nel portafoglio.</div>';
+
+  return h;
+}
 /* scheda: entrata singola */
 function todayStr(){ var x = new Date(); return x.getFullYear() + '-' + pad(x.getMonth() + 1) + '-' + pad(x.getDate()); }
 function openIn(cat){ sh = { kind:'in', d:{ cat:cat, amt:'', note:'', date: todayStr() } }; renderIn(); $('ov').className = 'ov show'; }
@@ -1794,86 +1841,6 @@ function saveIr(){
   for (i = 0; i < S.inc.rec.length; i++) { if (S.inc.rec[i].id === r.id) { S.inc.rec[i] = r; done = true; break; } }
   if (!done) S.inc.rec.push(r);
   save(); closeSheet(); render(); toast(r.name + ', +' + eur(incMonth(r)) + ' al mese');
-}
-
-/* ---------- SCONTRINI: foto salvata sul telefono e lettura del totale ---------- */
-var IDB = null;
-function idb(cb){
-  if (IDB) return cb(IDB);
-  try {
-    var rq = indexedDB.open('bi-scontrini', 1);
-    rq.onupgradeneeded = function(){ rq.result.createObjectStore('r'); };
-    rq.onsuccess = function(){ IDB = rq.result; cb(IDB); };
-    rq.onerror = function(){ cb(null); };
-  } catch(x) { cb(null); }
-}
-function rcPut(id, data){ idb(function(db){ if (!db) return; try { db.transaction('r', 'readwrite').objectStore('r').put(data, id); } catch(x) {} }); }
-function rcGet(id, cb){ idb(function(db){ if (!db) return cb(null); try { var q = db.transaction('r').objectStore('r').get(id); q.onsuccess = function(){ cb(q.result || null); }; q.onerror = function(){ cb(null); }; } catch(x) { cb(null); } }); }
-function rcDel(id){ idb(function(db){ if (!db) return; try { db.transaction('r', 'readwrite').objectStore('r').delete(id); } catch(x) {} }); }
-function rcClear(){ idb(function(db){ if (!db) return; try { db.transaction('r', 'readwrite').objectStore('r').clear(); } catch(x) {} }); }
-/* foto ridotta per non riempire il telefono */
-function rcPick(cb){
-  var inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.setAttribute('capture', 'environment');
-  inp.onchange = function(){
-    var f = inp.files && inp.files[0]; if (!f) return;
-    var rd = new FileReader();
-    rd.onload = function(e){
-      var img = new Image();
-      img.onload = function(){
-        var mx = 1400, w = img.width, h = img.height, k = Math.min(1, mx / Math.max(w, h)), c = document.createElement('canvas');
-        c.width = Math.round(w * k); c.height = Math.round(h * k);
-        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-        cb(c.toDataURL('image/jpeg', 0.72));
-      };
-      img.src = e.target.result;
-    };
-    rd.readAsDataURL(f);
-  };
-  inp.click();
-}
-/* legge il testo dello scontrino (serve internet la prima volta) e cerca totale e data */
-function parseReceipt(text){
-  var lines = String(text || '').split(/\n/), best = 0, any = 0, i, m, re = /(\d{1,4}(?:[.\s]\d{3})*[.,]\d{2})(?!\d)/g, v, key, date = '';
-  function toNum(s){ s = s.replace(/\s/g, ''); if (/,\d{2}$/.test(s)) s = s.replace(/\./g, '').replace(',', '.'); else s = s.replace(/,/g, ''); return parseFloat(s); }
-  for (i = 0; i < lines.length; i++) {
-    key = /(TOTALE|TOTAL|IMPORTO\s*PAGATO|PAGATO|DA\s*PAGARE|CONTANTE|CARTA|BANCOMAT|EURO|EUR)/i.test(lines[i]) && !/(SUBTOTALE|IVA|RESTO|SCONTO)/i.test(lines[i]);
-    re.lastIndex = 0;
-    while ((m = re.exec(lines[i])) !== null) {
-      v = toNum(m[1]);
-      if (!(v > 0) || v > 20000) continue;
-      if (key && /TOTAL/i.test(lines[i]) && v > best) best = v;
-      if (v > any) any = v;
-    }
-    if (!date) { m = /(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/.exec(lines[i]); if (m) { var yy = +m[3]; if (yy < 100) yy += 2000; if (+m[2] >= 1 && +m[2] <= 12 && +m[1] >= 1 && +m[1] <= 31) date = yy + '-' + pad(+m[2]) + '-' + pad(+m[1]); } }
-  }
-  return { amt: best || any || 0, date: date, sure: !!best };
-}
-var OCR_URL = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
-function rcOcr(url, cb){
-  function run(){ try { window.Tesseract.recognize(url, 'ita').then(function(r){ cb(parseReceipt(r && r.data ? r.data.text : '')); }, function(){ cb(null); }); } catch(x) { cb(null); } }
-  if (window.Tesseract) return run();
-  var s = document.createElement('script'); s.src = OCR_URL; s.onload = run; s.onerror = function(){ cb(null); };
-  document.head.appendChild(s);
-}
-function rcBox(photo){ return photo ? '<div class="rcbox"><img src="' + photo + '" alt="Scontrino"><span>Scontrino allegato</span><button class="x" data-act="rcrm">×</button></div>' : ''; }
-function rcBtn(){ return '<button class="ghost rcb" data-act="rcscan">📷 Fotografa lo scontrino</button>'; }
-function reSheet(){ if (!sh) return; if (sh.kind === 'sp') renderSp(); else if (sh.kind === 'mv') renderMv(); else if (!sh.kind) renderSheet(); }
-function rcScan(){
-  rcPick(function(url){
-    if (!sh) return;
-    var tgt = sh.kind ? sh.d : sh;
-    tgt.photo = url; reSheet(); toast('Leggo lo scontrino…');
-    rcOcr(url, function(res){
-      if (!sh) return;
-      tgt = sh.kind ? sh.d : sh;
-      if (res && res.amt > 0) {
-        var s2 = res.amt.toFixed(2).replace('.', ',');
-        if (sh.kind) tgt.amt = s2; else tgt.price = sh.kind ? s2 : (isFree(getItem(sh.id)) ? s2 : res.amt);
-        if (res.date && sh.kind === 'mv') tgt.date = res.date;
-        reSheet(); toast('Totale letto: ' + eur(res.amt) + (res.sure ? '' : ' (controlla)'));
-      } else toast('Non riesco a leggere il totale: scrivilo tu');
-    });
-  });
 }
 
 /* scheda: prelievo bancomat */
@@ -1956,7 +1923,7 @@ function renderRic(){
 
 function ricIncome(){
   var h = '<h2>Entrate ricorrenti <small>' + eur(monthMoney().incFixAll) + ' al mese</small></h2>', i, r, c;
-  if (!S.inc.rec.length) h += '<div class="empty">Stipendio, affitti incassati: inseriscili da Entrate e conto.</div>';
+  if (!S.inc.rec.length) h += '<div class="empty">Stipendio, affitti incassati: inseriscili con il tasto +.</div>';
   for (i = 0; i < S.inc.rec.length; i++) {
     r = S.inc.rec[i]; c = incCat(r.cat);
     h += '<div class="row rb" data-act="iredit" data-id="' + r.id + '"><img src="' + ic(c[2]) + '" alt="" style="width:24px;height:24px"><span>' + esc(r.name || c[1]) + ' <span class="wh">· il ' + (r.day || 1) + '</span></span><span class="pr pos">+' + eur(incMonth(r)) + '</span><span class="chev">›</span></div>';
@@ -1998,7 +1965,7 @@ function renderMov(){
   h += '</div><div class="hero"><div class="date">Spese ' + (movPer === 'oggi' ? 'di oggi' : movPer === '7' ? 'degli ultimi 7 giorni' : 'di ' + MM[new Date().getMonth()]) + '</div>' + meter(out, 'mov');
   h += '<div class="hint">' + L.length + (L.length === 1 ? ' movimento' : ' movimenti') + (inn > 0 ? ', entrate extra ' + eur(inn) : '') + '. Tocca una riga per modificarla. Le ricorrenti sono nella loro pagina.</div></div>';
   if (movPay) h += '<div class="fchip"><span>Solo pagati con <b>' + esc(movPay) + '</b></span><button class="x" data-act="mpay" data-v="">×</button></div>';
-  if (!L.length) return h + '<div class="empty">Nessun movimento nel periodo. Registra le spese da Cibo o dai settori.</div>';
+  if (!L.length) return h + '<div class="empty">Nessun movimento nel periodo. Registra con i tasti − e + qui sotto.</div>';
   for (i = 0; i < L.length; i++) {
     x = L[i]; dk = ymd(x.t);
     if (dk !== day) { day = dk; dt = new Date(x.t); h += '<div class="dayh"><span>' + GG[dt.getDay()] + ' ' + dt.getDate() + ' ' + MM[dt.getMonth()] + '</span><b>' + eur(tday[dk] || 0) + '</b></div>'; }
@@ -2037,7 +2004,7 @@ function renderCarte(){
       h += lrow(ic(PI[ty] || 'Receipt'), n || 'Metodo non indicato', 'spese tue ' + money(P[n].tue) + ', programmate ' + money(P[n].prog), P[n].tue + P[n].prog, ' data-act="mpayset" data-v="' + esc(n) + '"');
     }
   }
-  h += '</div><div class="hint">Tocca un metodo per vedere i suoi movimenti del mese. Il tipo di ogni carta o conto si imposta in Impostazioni.</div>';
+  h += '</div><div class="hint">Il tipo di ogni carta o conto si imposta in Impostazioni (⚙).</div>';
   return h;
 }
 
@@ -2192,7 +2159,7 @@ function whoChips(){
 function renderSheet(){
   var it = getItem(sh.id), h = '', i, n;
   h += '<div style="text-align:center">' + pic(it, 'big', 400) + '<div class="serif" style="font-size:25px;margin-top:10px">' + esc(it.name) + '</div></div>';
-  if (it.type !== 'pax') h += modeSeg('una');
+  h += modeSeg('una');
   if (it.type === 'pax') {
     if (it.meal) h += '<div class="chips" style="margin-top:14px"><button class="chip' + (sh.meal === 'pranzo' ? ' act' : '') + '" data-act="meal" data-v="pranzo">Pranzo</button>' +
       '<button class="chip' + (sh.meal === 'cena' ? ' act' : '') + '" data-act="meal" data-v="cena">Cena</button></div>';
@@ -2200,10 +2167,10 @@ function renderSheet(){
     h += '<div class="lbl">Per quante persone hai pagato</div><div class="stepper"><button data-act="x-">−</button><span class="v">' + sh.pax + '</span><button data-act="x+">+</button></div>';
     n = num(sh.price);
     h += '<div class="perhead">' + (n > 0 ? 'A testa <b>' + eur(n / sh.pax) + '</b>' : 'Inserisci il totale') + '</div>';
-    h += rcBox(sh.photo) + rcBtn() + payChips('fpay', sh.pay) + '<button class="btn" data-act="add">Registra' + (it.meal ? ' ' + sh.meal : '') + '</button>';
+    h += payChips('fpay', sh.pay) + '<button class="btn" data-act="add">Registra' + (it.meal ? ' ' + sh.meal : '') + '</button>';
   } else if (it.type === 'amount') {
     h += '<div class="lbl">Totale scontrino</div><input class="amt" id="amt" inputmode="decimal" placeholder="0,00" value="' + esc(String(sh.price).replace('.', ',')) + '">';
-    h += rcBox(sh.photo) + rcBtn() + payChips('fpay', sh.pay) + '<div style="height:6px"></div><button class="btn" data-act="add">Registra spesa</button>';
+    h += payChips('fpay', sh.pay) + '<div style="height:6px"></div><button class="btn" data-act="add">Registra spesa</button>';
   } else {
     if (it.variants) {
       h += '<div class="chips" style="margin-top:14px">';
@@ -2227,7 +2194,6 @@ function addEntry(){
     e = { id: now + '_' + i + '_' + Math.floor(Math.random() * 1e5), t: now, item: it.id, price: p, pay: sh.pay };
     if (it.type === 'pax') { e.pax = sh.pax; e.who = 0; if (it.meal) e.meal = sh.meal; }
     if (it.variants && sh.v >= 0) e.v = it.variants[sh.v][0];
-    if (i === 0 && sh.photo) { rcPut(e.id, sh.photo); e.rc = 1; }
     S.log.push(e);
   }
   if (sh.def && !free && !it.variants) it.price = p;
@@ -2262,7 +2228,7 @@ function renderMv(){
     c = catOf(d.sec, 'log', d.cat);
     h += '<div class="shead" style="background:linear-gradient(150deg,' + c[3] + ',' + c[4] + ')"><img src="' + ic(c[2]) + '" alt=""><div><div class="st1">' + esc(c[1]) + '</div><div class="st2">Modifica movimento</div></div></div>';
     h += '<div class="fld"><label>Categoria</label><div class="chips l">';
-    for (i = 0; i < SECT[d.sec].log.length; i++) { c = SECT[d.sec].log[i]; h += '<button class="chip kchip' + (d.cat === c[0] ? ' act' : '') + '" data-act="mvcat" data-v="' + c[0] + '"><img src="' + ic(c[2]) + '" alt="">' + esc(c[1]) + '</button>'; }
+    var MC = allCats(d.sec); for (i = 0; i < MC.length; i++) { c = MC[i]; h += '<button class="chip kchip' + (d.cat === c[0] ? ' act' : '') + '" data-act="mvcat" data-v="' + c[0] + '"><img src="' + ic(c[2]) + '" alt="">' + esc(c[1]) + '</button>'; }
     h += '</div></div>';
   } else if (sh.src === 'pre') {
     h += '<div class="shead" style="background:linear-gradient(150deg,#45a672,#1f5a3a)"><img src="' + ic('Money with wings') + '" alt=""><div><div class="st1">Prelievo bancomat</div><div class="st2">Modifica</div></div></div>';
@@ -2286,12 +2252,10 @@ function renderMv(){
     }
   }
   if (sh.src === 'log' || sh.src === 'sp') {
-    h += d.photo ? rcBox(d.photo) : (d.rc ? '<div class="rcbox"><img id="m_rc" alt="Scontrino"><span>Scontrino allegato</span><button class="x" data-act="rcrm">×</button></div>' : '');
-    h += rcBtn() + payChips('mvpay', d.pay);
+    h += payChips('mvpay', d.pay);
   }
   h += '<div style="height:14px"></div><button class="btn" data-act="mvsave">Salva modifiche</button><button class="btn2" data-act="mvdel">Elimina movimento</button>';
   $('sheet').innerHTML = h;
-  if (!d.photo && d.rc) rcGet(sh.id, function(u){ var im = $('m_rc'); if (im && u) im.src = u; });
 }
 function saveMv(){
   syncMv();
@@ -2310,8 +2274,7 @@ function saveMv(){
   if (sh.src === 'sp' || sh.src === 'inc') e.cat = d.cat;
   if (sh.src === 'sp') e.veh = d.veh;
   if (sh.src === 'log' || sh.src === 'sp') e.pay = d.pay;
-  if (d.photo) { rcPut(e.id, d.photo); e.rc = 1; }
-  else if (!d.rc && e.rc) { rcDel(e.id); e.rc = 0; }
+  if (e.rc) delete e.rc;
   if (d.pax) e.pax = d.pax;
   if (d.meal) e.meal = d.meal;
   if (d.v) e.v = d.v;
@@ -2327,13 +2290,16 @@ function render(){
   else if (view === 'sec') m.innerHTML = renderSec();
   else if (view === 'ric') m.innerHTML = renderRic();
   else if (view === 'inc') m.innerHTML = renderInc();
+  else if (view === 'spesa') m.innerHTML = renderSpesa();
+  else if (view === 'conto') m.innerHTML = renderConto();
   else if (view === 'oggi') m.innerHTML = renderOggi();
   else if (view === 'numeri') m.innerHTML = renderNumeri();
   else if (view === 'tel') m.innerHTML = renderTel();
   else if (view === 'casa') m.innerHTML = renderCasa();
   else m.innerHTML = renderSet();
-  $('t_home').className = view === 'home' || view === 'tel' || view === 'casa' || view === 'sec' || view === 'inc' || view === 'set' ? 'act' : '';
-  $('t_oggi').className = view === 'oggi' || view === 'numeri' ? 'act' : '';
+  $('t_home').className = view === 'home' || view === 'set' || view === 'conto' ? 'act' : '';
+  $('t_out').className = 'pm out' + (view === 'spesa' || view === 'sec' || view === 'oggi' || view === 'numeri' || view === 'tel' || view === 'casa' ? ' act' : '');
+  $('t_in').className = 'pm in' + (view === 'inc' ? ' act' : '');
   $('t_mov').className = view === 'mov' ? 'act' : '';
   $('t_ric').className = view === 'ric' ? 'act' : '';
   setTimeout(animMeters, 60);
@@ -2397,8 +2363,6 @@ document.addEventListener('click', function(ev){
   else if (a === 'presave') savePre();
   else if (a === 'cashset') openCashSet();
   else if (a === 'cashsave') saveCash();
-  else if (a === 'rcscan') rcScan();
-  else if (a === 'rcrm') { if (sh.kind) { sh.d.photo = ''; sh.d.rc = false; } else sh.photo = ''; reSheet(); }
   else if (a === 'htab') { hubTab = el.getAttribute('data-v'); view = 'home'; render(); window.scrollTo(0, 0); }
   else if (a === 'mper') { movPer = el.getAttribute('data-v'); render(); }
   else if (a === 'mpay') { movPay = el.getAttribute('data-v'); render(); }
@@ -2440,7 +2404,7 @@ document.addEventListener('click', function(ev){
       var rd = sh.d;
       if (rd.sec === 'cibo') { if (getItem(rd.cat)) { openSheet(rd.cat); if (rd.amt !== '' && num(rd.amt) > 0 && !isFree(getItem(rd.cat))) { sh.price = num(rd.amt); } sh.pay = rd.pay; renderSheet(); } }
       else {
-        curSec = rd.sec; var LC = SECT[rd.sec].log, okc = false, q;
+        curSec = rd.sec; var LC = allCats(rd.sec), okc = false, q;
         for (q = 0; q < LC.length; q++) { if (LC[q][0] === rd.cat) okc = true; }
         sh = { kind:'sp', d:{ cat: okc ? rd.cat : LC[0][0], amt:rd.amt, note:'', pay:rd.pay, veh:rd.veh } }; renderSp();
       }
@@ -2456,7 +2420,7 @@ document.addEventListener('click', function(ev){
   else if (a === 'mvsave') saveMv();
   else if (a === 'mvdel') {
     if (!confirm('Eliminare questo movimento?')) return;
-    var mi = mvIndex(sh.src, sh.id); if (mi >= 0) { if (mvList(sh.src)[mi].rc) rcDel(sh.id); mvList(sh.src).splice(mi, 1); }
+    var mi = mvIndex(sh.src, sh.id); if (mi >= 0) { mvList(sh.src).splice(mi, 1); }
     save(); closeSheet(); render(); toast('Eliminato');
   }
   else if (a === 'innew') openIn(el.getAttribute('data-k'));
@@ -2508,6 +2472,7 @@ document.addEventListener('click', function(ev){
     buildSect(); save(); closeSheet(); view = 'home'; render(); toast('Settore eliminato');
   }
   else if (a === 'spnew') openSp(el.getAttribute('data-k'));
+  else if (a === 'spnew2') { curSec = el.getAttribute('data-s'); entSel = ''; openSp(el.getAttribute('data-k')); }
   else if (a === 'spveh') { sh.d.veh = el.getAttribute('data-v'); renderSp(); }
   else if (a === 'spwho') { sh.d.who = +el.getAttribute('data-i'); renderSp(); }
   else if (a === 'spsave') saveSp();
@@ -2612,13 +2577,13 @@ document.addEventListener('click', function(ev){
   else if (a === 'bkimp') importBackup();
   else if (a === 'reset') {
     if (!confirm('Cancellare tutti i movimenti (spese, entrate extra, prelievi)? Le ricorrenti restano.')) return;
-    S.log = []; S.sp = []; S.inc.log = []; S.pre = []; S.cashBase = 0; S.cashFrom = 0; rcClear(); save(); render(); toast('Movimenti azzerati');
+    S.log = []; S.sp = []; S.inc.log = []; S.pre = []; S.cashBase = 0; S.cashFrom = 0; save(); render(); toast('Movimenti azzerati');
   }
   else if (a === 'resetall') {
     if (!confirm('Reset totale: cancello TUTTO, anche ricorrenti, entrate fisse, case, telefonia e saldo. Procedo?')) return;
     if (!confirm('Sicuro? Non si può annullare.')) return;
     try { localStorage.removeItem(KEY); localStorage.removeItem(OLDKEY); } catch(x) {}
-    S = null; rcClear(); load(); buildSect(); navStack = []; view = 'home'; hubTab = 'dash'; render(); toast('App azzerata');
+    S = null; load(); buildSect(); navStack = []; view = 'home'; hubTab = 'dash'; render(); toast('App azzerata');
   }
 });
 
@@ -2670,6 +2635,7 @@ document.addEventListener('change', function(ev){
   save();
 });
 
+try { if (window.indexedDB) indexedDB.deleteDatabase('bi-scontrini'); } catch(x) {}
 load(); buildSect(); try { history.replaceState({ root:1 }, ''); } catch(x) {} render();
 try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(x) {}
 try { if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js'); } catch(x) {}
