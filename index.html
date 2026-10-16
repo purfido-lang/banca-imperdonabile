@@ -485,6 +485,16 @@ i.bo{background:#e8622f}i.bi{background:#45a672}
 .mnav b{font-size:20px;font-weight:800;text-transform:capitalize}
 .mnav button{width:46px;height:42px;border-radius:14px;border:none;background:#16171a;color:#fff;font-size:24px;line-height:1}
 .mnav button[disabled]{opacity:.25}
+.manbox{margin-top:12px}
+.mrow2{display:flex;align-items:center;gap:9px;width:100%;background:none;border:none;border-bottom:1px solid #f0f0f0;padding:10px 0;font:inherit;text-align:left;color:#16171a}
+.mrow2 img{width:26px;height:26px;flex:0 0 auto}
+.mrow2 .lt{flex:1;min-width:0;display:flex;flex-direction:column}
+.mrow2 .lt b{font-size:15px}.mrow2 .lt i{font-style:normal;font-size:12px;color:#7a7f88}
+.mrow2 .tick{flex:0 0 auto;width:26px;height:26px;border-radius:8px;border:2px solid #c4c8cf;display:grid;place-items:center;font-weight:800;color:#fff}
+.mrow2.ok .tick{background:#3fbf73;border-color:#3fbf73}
+.mrow2.ok .lt b{text-decoration:line-through;color:#8a8f98}
+.mrow2.late .lt i{color:#e3552b;font-weight:700}
+.mrow2 .lv{font-family:'Inter',sans-serif;font-weight:600;font-size:15px;color:#f4f3ee;padding:3px 8px;border-radius:5px;background:linear-gradient(180deg,#4a4a4d 0%,#3d3d40 49%,#141416 49%,#141416 51%,#38383b 51%,#2c2c2f 100%)}
 </style>
 </head>
 <body>
@@ -566,7 +576,7 @@ var OPS = [
   ['altro','Altro','#5a4636','#ffffff']
 ];
 var LTYPES = [['mobile','Mobile'],['fisso','Fisso casa'],['fibra','Fibra / WiFi'],['fwa','FWA'],['altro','Altro']];
-var DEF_PAY = ['Carta Oro MPS','Carta debito MPS','BBVA','Revolut','Satispay','Conto corrente (RID)','Contanti'];
+var DEF_PAY = ['Carta Oro MPS','Carta debito MPS','BBVA','Revolut','Satispay','Conto corrente (RID)','Bonifico','Assegno','Contanti'];
 
 /* utenze di casa: id, nome, icona 3D, colori del riquadro */
 var KINDS = [
@@ -583,8 +593,8 @@ var FREQ = [[1,'Mensile'],[2,'Bimestrale'],[3,'Trimestrale'],[4,'Quadrimestrale'
 var ENERGY = ['Enel Energia','Servizio Elettrico Naz.','A2A','Edison','Eni Plenitude','Hera Comm','Estenergy','AGSM AIM','Ascotrade','Iren','Acea','Sorgenia','Engie','Octopus Energy','Dolomiti Energia','Illumia'];
 var PROV = { luce:ENERGY, gas:ENERGY, rifiuti:['Comune (TARI)'], condominio:['Amministratore'], affitto:['Proprietario'] };
 var OFFERS = ['Prezzo fisso','Variabile (PUN/PSV)','Tutele / Placet','Altro'];
-var PAYTYPES = [['credito','Carta di credito'],['debito','Carta di debito'],['rid','Conto (RID)'],['wallet','Wallet / app'],['cash','Contanti']];
-var DEF_PAYTYPE = { 'Contanti':'cash', 'Carta Oro MPS':'credito', 'Carta debito MPS':'debito', 'BBVA':'debito', 'Revolut':'debito', 'Satispay':'wallet', 'Conto corrente (RID)':'rid' };
+var PAYTYPES = [['credito','Carta di credito'],['debito','Carta di debito'],['rid','Conto (RID)'],['manuale','Bonifico / assegno (a mano)'],['wallet','Wallet / app'],['cash','Contanti']];
+var DEF_PAYTYPE = { 'Contanti':'cash', 'Carta Oro MPS':'credito', 'Carta debito MPS':'debito', 'BBVA':'debito', 'Revolut':'debito', 'Satispay':'wallet', 'Conto corrente (RID)':'rid', 'Bonifico':'manuale', 'Assegno':'manuale' };
 
 var S = null, view = 'home', period = 'oggi', sh = null, toastT = null, telFilter = '', casaSel = '';
 
@@ -631,6 +641,13 @@ function load(){
     if (!S.inc) S.inc = { log: [], rec: [] };
     if (!S.pre) S.pre = [];
     if (S.tel.pay.indexOf('Contanti') < 0) { S.tel.pay.push('Contanti'); S.payType['Contanti'] = 'cash'; }
+    if (!S.bonOk) {
+      var ci = S.tel.pay.indexOf('Contanti'); if (ci < 0) ci = S.tel.pay.length;
+      if (S.tel.pay.indexOf('Assegno') < 0) { S.tel.pay.splice(ci, 0, 'Assegno'); S.payType['Assegno'] = 'manuale'; }
+      if (S.tel.pay.indexOf('Bonifico') < 0) { S.tel.pay.splice(ci, 0, 'Bonifico'); S.payType['Bonifico'] = 'manuale'; }
+      S.bonOk = 1;
+    }
+    if (!S.done) S.done = {};
     save();
     return;
   }
@@ -757,7 +774,7 @@ function renderHome(){
   }
   return h;
 }
-var PTCOL = { credito:'#c9a227', debito:'#d9774b', rid:'#5b8fd9', wallet:'#5fb37a', cash:'#3f9e6a', '':'#7a6450' };
+var PTCOL = { credito:'#c9a227', debito:'#d9774b', rid:'#5b8fd9', manuale:'#8c70ad', wallet:'#5fb37a', cash:'#3f9e6a', '':'#7a6450' };
 function payType(name){ return (S.payType && S.payType[name]) || ''; }
 function payTypeName(name){ var t = payType(name), i; for (i = 0; i < PAYTYPES.length; i++) { if (PAYTYPES[i][0] === t) return PAYTYPES[i][1]; } return 'tipo da impostare'; }
 function recurring(){
@@ -1141,6 +1158,10 @@ var SECT_BASE = {
     log:[['vestiti','Vestiti','T-shirt','#3c6fd1','#142a5a'],['scarpe','Scarpe','Running shoe','#e0612f','#5a1f0c'],['giacche','Giacche','Coat','#8a7058','#3d3027'],
          ['eleganti','Abiti eleganti','Dress','#d9577f','#5a1730'],['borse','Borse e accessori','Handbag','#c9a227','#5a4510'],['intimo','Intimo e calze','Socks','#7b84b0','#2c3050'],
          ['occhiali','Occhiali da sole','Sunglasses','#5a5a5a','#1c1c1c'],['altro','Altro','Shopping bags','#8c70ad','#45345a']] },
+  bon: { name:'Bonifici e assegni', sub:'Pagamenti che fai tu a mano dal conto', icon:'Bank', col:['#8c70ad','#2e2240'], manual:true,
+    rec:[],
+    log:[['bonifico','Bonifico','Bank','#8c70ad','#2e2240'],['assegno','Assegno','Page facing up','#7b84b0','#2c3050'],
+         ['f24','F24 e tasse','Receipt','#c9a227','#4a3a10'],['bon_altro','Altro','Euro banknote','#5a5f6b','#1c1e22']] },
   estetica: { name:'Estetica e benessere', sub:'Parrucchiere, unghie, solarium, massaggi', icon:'Lipstick', col:['#d9577f','#4a1430'],
     rec:[['abbon','Abbonamento / pacchetto','Repeat button','#8c70ad','#45345a']],
     log:[['parrucchiere','Parrucchiere / barbiere','Barber pole','#d9534f','#4a1515'],['piega','Piega / colore','Person getting haircut','#c9a227','#5a4510'],
@@ -1148,7 +1169,7 @@ var SECT_BASE = {
          ['massaggio','Massaggio','Person getting massage','#2fa3a0','#0c3d3c'],['estetista','Estetista','Sparkles','#8c70ad','#45345a'],
          ['spa','SPA / terme','Hot springs','#2fa3d4','#0b4a66'],['cosmetici','Cosmetici e profumi','Lotion bottle','#d97757','#5a2a17']] }
 };
-var BASE_ORDER = ['abb','auto','cani','salute','sport','abbig','estetica'];
+var BASE_ORDER = ['abb','bon','auto','cani','salute','sport','abbig','estetica'];
 var SECT = {}, SECT_ORDER = [];
 /* palette per settori e categorie creati dall'utente */
 var COLS = [['#7b3fc4','#2c1650'],['#d9534f','#4a1515'],['#2fa3a0','#0c3d3c'],['#4f9e57','#173a1c'],['#3c6fd1','#142a5a'],
@@ -1347,7 +1368,9 @@ function entChips(sel, act){
 }
 function openSp(cat){
   var EL = SECT[curSec].ent ? entList(curSec) : [];
-  sh = { kind:'sp', d:{ cat:cat, amt:'', note:'', pay: defPay(), veh: entSel || (EL.length === 1 ? EL[0].id : '') } };
+  var pp = defPay(); if (curSec === 'bon') pp = cat === 'assegno' ? 'Assegno' : 'Bonifico';
+  if (S.tel.pay.indexOf(pp) < 0) pp = defPay();
+  sh = { kind:'sp', d:{ cat:cat, amt:'', note:'', pay: pp, veh: entSel || (EL.length === 1 ? EL[0].id : '') } };
   renderSp(); $('ov').className = 'ov show';
 }
 function syncSp(){ if (sh && sh.kind === 'sp' && $('s_amt')) { sh.d.amt = val('s_amt'); sh.d.note = val('s_note'); } }
@@ -1363,7 +1386,7 @@ function renderSp(){
   h += '<div style="height:6px"></div><button class="btn" data-act="spsave">Registra</button>';
   $('sheet').innerHTML = h;
 }
-var NOTE_PH = { auto:'es. 40 litri, A4 Venezia–Udine', salute:'es. antibiotico, visita oculistica', sport:'es. film, concerto, racchetta',
+var NOTE_PH = { bon:'es. a chi e per cosa: caparra, affitto, idraulico', auto:'es. 40 litri, A4 Venezia–Udine', salute:'es. antibiotico, visita oculistica', sport:'es. film, concerto, racchetta',
   abbig:'es. scarpe running Nike, jeans Levi\'s', estetica:'es. taglio e barba, manicure semipermanente', cani:'es. sacco crocchette 12 kg, richiamo vaccino' };
 function whoChipsD(cur, act){
   var h = '<div class="lbl">Per chi</div><div class="chips">', i;
@@ -1552,7 +1575,7 @@ function hubTile(view, sec, name, img, col, v, sub, still){
 var INC = [['stipendio','Stipendio','Briefcase','#3f9e6a','#123a24'],['affitti','Affitti incassati','Key','#c9a227','#5a4510'],
   ['borsa','Rendite di borsa','Chart increasing','#3c6fd1','#142a5a'],['crypto','Criptovalute','Coin','#e8a33a','#5a3a0c'],
   ['attivita','Attività e business','Handshake','#2fa3a0','#0c3d3c'],['regali','Donazioni e regali','Gift','#d9577f','#5a1730'],
-  ['rimborsi','Rimborsi','Receipt','#7b84b0','#2c3050'],['altro','Altre entrate','Euro banknote','#4f9e57','#1f4626']];
+  ['rimborsi','Rimborsi','Receipt','#7b84b0','#2c3050'],['bonric','Bonifici e assegni ricevuti','Bank','#5b6fd9','#1c2554'],['altro','Altre entrate','Euro banknote','#4f9e57','#1f4626']];
 function incCat(id){ for (var i = 0; i < INC.length; i++) { if (INC[i][0] === id) return INC[i]; } return INC[INC.length - 1]; }
 
 /* data dell'addebito di un certo mese (giorno oltre fine mese = ultimo giorno) */
@@ -1647,7 +1670,8 @@ function renderHub(){
   var net = M.inc - M.spendPlan;
   var rid = M.byType.rid || { all:0, done:0 };
   var card = { all:0, done:0 }, tk;
-  for (tk in M.byType) { if (M.byType.hasOwnProperty(tk) && tk !== 'rid') { card.all += M.byType[tk].all; card.done += M.byType[tk].done; } }
+  var man = M.byType.manuale || { all:0, done:0 };
+  for (tk in M.byType) { if (M.byType.hasOwnProperty(tk) && tk !== 'rid' && tk !== 'manuale') { card.all += M.byType[tk].all; card.done += M.byType[tk].done; } }
   var autoPct = M.spendPlan > 0 ? Math.round(M.autoAll / M.spendPlan * 100) : 0;
 
   /* FOGLI DEL CRUSCOTTO */
@@ -1673,7 +1697,8 @@ function renderHub(){
   h += clock('Uscite totali', M.spendPlan, 'orange', 'una tantum ' + money(M.logged) + '<br>ricorrenti ' + money(M.autoAll), '', false, mfs);
   h += clock('Entrate totali', M.inc, 'green', 'una tantum ' + money(M.incLog) + '<br>ricorrenti ' + money(M.incFixAll), '', false, mfs);
   h += '</div><div class="cone">';
-  h += clock('Di cui spese ricorrenti', M.autoAll, 'black', 'RID ' + money(rid.all) + ', su carta ' + money(card.all), '', false, mfs);
+  h += clock('Di cui spese ricorrenti', M.autoAll, 'black', 'RID ' + money(rid.all) + ', su carta ' + money(card.all) + (man.all > 0 ? ', a mano ' + money(man.all) : ''), '', false, mfs);
+  h += '</div>' + manualBox() + '<div>';
   h += '</div>';
   h += '<button class="cardline" data-act="tab" data-v="conto"><img src="' + ic('Bank') + '" alt=""><span>Saldo reale, contanti e prelievi</span><span class="chev">›</span></button>';
   h += '</div>';
@@ -1712,6 +1737,27 @@ function renderHub(){
   /* foglio Settori: solo contatori */
   h += '<div class="hub">' + sectorTiles(true) + '</div>';
   return h;
+}
+/* promemoria: ricorrenti da pagare a mano (bonifico, assegno) */
+function manualList(){
+  var L = [], i, x, d = new Date(), ym = d.getFullYear() + '-' + (d.getMonth() + 1);
+  for (i = 0; i < S.rec.length; i++) { x = S.rec[i]; if (SECT[x.sec] && payType(x.pay) === 'manuale') L.push({ k: ym + '|r' + x.id, name: x.name || catOf(x.sec, 'rec', x.cat)[1], day: x.day || 1, v: x.amt, f: x.freq || 1, pay: x.pay, img: ic(catOf(x.sec, 'rec', x.cat)[2]) }); }
+  for (i = 0; i < S.casa.bills.length; i++) { x = S.casa.bills[i]; if (getHome(x.home) && payType(x.pay) === 'manuale') L.push({ k: ym + '|b' + x.id, name: kindInfo(x.kind)[1] + ' ' + getHome(x.home).name, day: x.day || 1, v: x.amt, f: x.freq || 1, pay: x.pay, img: ICONS[kindInfo(x.kind)[2]] }); }
+  for (i = 0; i < S.tel.lines.length; i++) { x = S.tel.lines[i]; if (payType(x.pay) === 'manuale') L.push({ k: ym + '|l' + i, name: opInfo(x.op)[1] + ' ' + (x.label || ''), day: x.day || 1, v: lineMonth(x), f: 1, pay: x.pay, img: ICONS['Mobile phone'] }); }
+  L.sort(function(a, b){ return a.day - b.day; });
+  return L;
+}
+function manualBox(){
+  var L = manualList(), h, i, x, done, today = new Date().getDate(), todo = 0;
+  if (!L.length) return '';
+  if (!S.done) S.done = {};
+  for (i = 0; i < L.length; i++) { if (!S.done[L[i].k]) todo++; }
+  h = '<div class="ledger manbox"><div class="lhead">Da pagare a mano questo mese <span class="lht">' + (todo ? todo + ' da fare' : 'tutto fatto') + '</span></div>';
+  for (i = 0; i < L.length; i++) {
+    x = L[i]; done = !!S.done[x.k];
+    h += '<button class="mrow2' + (done ? ' ok' : (x.day < today ? ' late' : '')) + '" data-act="mdone" data-k="' + esc(x.k) + '"><span class="tick">' + (done ? '✓' : '') + '</span><img src="' + x.img + '" alt=""><span class="lt"><b>' + esc(x.name) + '</b><i>' + (done ? 'fatto' : (x.day < today ? 'scaduto il ' : 'entro il ') + x.day) + ', ' + esc(x.pay) + (x.f > 1 ? ', ' + freqName(x.f).toLowerCase() : '') + '</i></span><span class="lv">' + money(x.v) + '</span></button>';
+  }
+  return h + '<div class="lsub">Tocca una riga quando hai fatto il bonifico o l\'assegno. Il saldo li conta comunque.</div></div>';
 }
 /* PAGINA SPESA (tasto −): si sceglie il settore */
 function sectorTiles(still){
@@ -2475,6 +2521,7 @@ document.addEventListener('click', function(ev){
   else if (a === 'cashset') openCashSet();
   else if (a === 'cashsave') saveCash();
   else if (a === 'htab') { hubTab = el.getAttribute('data-v'); view = 'home'; render(); window.scrollTo(0, 0); }
+  else if (a === 'mdone') { var mk = el.getAttribute('data-k'); if (!S.done) S.done = {}; if (S.done[mk]) delete S.done[mk]; else S.done[mk] = 1; save(); render(); }
   else if (a === 'mper') { movPer = el.getAttribute('data-v'); if (movPer === 'mesi') movMon = 0; render(); }
   else if (a === 'mmon') { movMon = +el.getAttribute('data-v'); render(); }
   else if (a === 'mpay') { movPay = el.getAttribute('data-v'); render(); }
